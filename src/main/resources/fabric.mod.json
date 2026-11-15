@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "habi_train_survive",
+  "version": "${version}",
+  "name": "Habi Train Survive",
+  "description": "Habi Train Survive 基础模组。",
+  "license": "All-Rights-Reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["io.wifi.habitrainsurvive.HabiTrainSurvive"],
+    "client": ["io.wifi.habitrainsurvive.client.HabiTrainSurviveClient"]
+  },
+  "mixins": ["habi_train_survive.mixins.json"],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "${minecraft_version}",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
