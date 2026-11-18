@@ -1,0 +1,50 @@
+{
+  "enabled": true,
+  "welcomeTitle": true,
+  "title": "§6欢迎来到哈比生存服",
+  "subtitle": "§e{player}，输入 /guide 开始你的旅程",
+  "welcomeMessage": "§a欢迎！使用 /menu 浏览功能，/rules 查看规则，/guide 查看指南。",
+  "rewardEnabled": true,
+  "rewardKit": "newbie",
+  "rewardMessage": "§a新手奖励已存入礼物箱，使用 /gift box 领取；背包满时可稍后领取。",
+  "guideTitle": "新手指南",
+  "rulesTitle": "服务器规则",
+  "rules": [
+    "尊重他人，禁止辱骂、骚扰与作弊。",
+    "禁止偷窃、恶意破坏、卡服与利用漏洞。",
+    "建造前先圈地，保护好自己的永久资产。",
+    "交易前确认物品与价格，遇到问题请联系管理员。"
+  ],
+  "steps": [
+    {
+      "id": "world",
+      "title": "1. 开始生存",
+      "lines": ["使用 /world 浏览世界，在永久生存世界安家。", "/nether 前往地狱，/end 前往末地；/hub 返回主城。"],
+      "command": "world"
+    },
+    {
+      "id": "claim",
+      "title": "2. 保护家园",
+      "lines": ["使用 /claim 查看圈地帮助，先保护再建造。", "主城禁止圈地，请在生存世界建立自己的领地。"],
+      "command": "claim"
+    },
+    {
+      "id": "earn",
+      "title": "3. 赚钱与签到",
+      "lines": ["使用 /daily 领取现有签到奖励，/quests 查看任务。", "使用 /shop 浏览系统商店；签到每天只计算一次。"],
+      "command": "daily"
+    },
+    {
+      "id": "trade",
+      "title": "4. 安全交易",
+      "lines": ["使用 /ah 浏览拍卖，/trade 发起面对面交易。", "交易前确认价格，/gift box 领取礼物。"],
+      "command": "ah"
+    },
+    {
+      "id": "death",
+      "title": "5. 死亡与找回",
+      "lines": ["死亡后使用 /grave 查看墓碑与找回方式。", "返回与传送仍受冷却、战斗和世界开放状态限制。"],
+      "command": "grave"
+    }
+  ]
+}

@@ -1,0 +1,2984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>任务编辑器 · Habi Train Survive</title>
+<!--
+  设计契约（本文件唯一界面来源，无外部 CSS/JS/字体/图片）
+  定位：离线单文件的任务配置管理工具，供服务器管理员在桌面上批量编辑并导出 quests.json。
+  语义色：--accent 主操作/选中；--ok 成功；--warn 校验警告；--danger 错误/删除；--surface 面板；--sidebar 导航。
+  字体：系统中文无衬线（正文 13px，标题 14–18px，ID/数值使用等宽字体）。
+  节奏：间距 4/8/12/16/20/24/32，圆角 6/10/14，阴影仅两级。
+  动效：120ms 用于悬停/按压，200ms 用于面板与弹层（cubic-bezier，非线性）；尊重 prefers-reduced-motion。
+  规则：所有可点击元素使用原生 button/input/select；键盘焦点必须可见；状态用内联状态条与问题面板表达，不用 alert 作为唯一反馈。
+-->
+<script>window.QUEST_BUNDLE = /*__QUEST_BUNDLE__*/null;</script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#eef1f6;
+  --surface:#ffffff;
+  --surface-2:#f7f9fc;
+  --surface-3:#eaeff6;
+  --sidebar:#0f1823;
+  --sidebar-2:#18242f;
+  --sidebar-3:#1d3145;
+  --sidebar-line:#243240;
+  --line:#dde4ec;
+  --line-strong:#c3cedb;
+  --text:#111a24;
+  --muted:#5a6b7d;
+  --faint:#8898a9;
+  --inv:#e9eff6;
+  --inv-muted:#93a6ba;
+  --accent:#1f6fd0;
+  --accent-hover:#185ab0;
+  --accent-soft:#e8f1fc;
+  --ok:#16724a;
+  --ok-soft:#e6f5ed;
+  --warn:#986000;
+  --warn-soft:#fdf4de;
+  --danger:#b92f2a;
+  --danger-soft:#fdeceb;
+  --radius-s:6px;
+  --radius-m:10px;
+  --radius-l:14px;
+  --shadow-1:0 1px 2px rgba(16,24,34,.06);
+  --shadow-2:0 14px 34px -16px rgba(16,24,34,.4);
+  --t-fast:120ms cubic-bezier(.2,.9,.3,1);
+  --t:200ms cubic-bezier(.2,.9,.25,1);
+  --font:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);font-size:13px;line-height:1.5;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+code,.mono{font-family:var(--mono)}
+h1,h2,h3,p{margin:0}
+ul,ol{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sidebar :focus-visible{outline-color:#8dbcf5}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+svg{display:block;flex:0 0 auto}
+[hidden]{display:none!important}
+
+/* ---------- 框架 ---------- */
+.app{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:12px;padding:9px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex:0 0 auto;position:sticky;top:0;z-index:40}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:linear-gradient(150deg,#2569c9,#123f78);color:#eaf2ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.brand-text strong{font-size:14px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.brand-text span{font-size:11px;color:var(--muted);white-space:nowrap}
+.topbar-meta{display:flex;align-items:center;gap:6px;margin-left:6px;flex-wrap:wrap;min-width:0}
+.meta-chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);font-size:11px;white-space:nowrap}
+.meta-chip b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.topbar-actions{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.draft-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.draft-chip[data-dirty="1"]{background:var(--warn-soft);border-color:#ecd7a6;color:#7d5200}
+.draft-chip .dot{width:6px;height:6px;border-radius:50%;background:#9fb0c2}
+.draft-chip[data-dirty="1"] .dot{background:#d08a00}
+
+/* 内联状态条 */
+.statusbar{display:flex;align-items:center;gap:8px;padding:7px 16px;min-height:34px;font-size:12px;background:var(--surface-2);border-bottom:1px solid var(--line);color:var(--muted);flex:0 0 auto;transition:background-color var(--t),color var(--t)}
+.statusbar[data-tone="ok"]{background:var(--ok-soft);color:#12583a;border-bottom-color:#c4e5d1}
+.statusbar[data-tone="warn"]{background:var(--warn-soft);color:#7a5000;border-bottom-color:#eeddb3}
+.statusbar[data-tone="err"]{background:var(--danger-soft);color:#8f1f1b;border-bottom-color:#f0c3bf}
+.statusbar .status-icon{display:flex;align-items:center;color:currentColor}
+.statusbar .status-text{min-width:0;overflow-wrap:anywhere}
+.notice{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#eef4fd;border-bottom:1px solid #d3e2f6;font-size:12px;color:#23496f;flex:0 0 auto;flex-wrap:wrap}
+.notice strong{font-weight:600}
+.notice .btn{margin-left:auto}
+
+/* 三栏 */
+.shell{display:grid;grid-template-columns:274px minmax(0,1fr) 344px;flex:1 1 auto;min-height:0}
+body.issues-closed .shell{grid-template-columns:274px minmax(0,1fr)}
+body.issues-closed .issues{display:none}
+.sidebar{background:var(--sidebar);color:var(--inv);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;border-right:1px solid #0a1017}
+.side-search{position:sticky;top:0;z-index:5;padding:12px;background:var(--sidebar);border-bottom:1px solid var(--sidebar-line)}
+.side-input{width:100%;height:32px;padding:0 10px;border-radius:var(--radius-s);border:1px solid #2b3b4c;background:#16212c;color:var(--inv);font-size:12px;transition:border-color var(--t-fast),box-shadow var(--t-fast)}
+.side-input::placeholder{color:#7d8fa2}
+.side-input:focus{border-color:#4f86c4;box-shadow:0 0 0 3px rgba(94,146,204,.22);outline:none}
+.nav{padding:6px 8px 16px;flex:1 1 auto}
+.nav-group{padding:6px 0 2px}
+.nav-group-head{display:flex;align-items:center;gap:8px;padding:4px 8px 6px;color:var(--inv-muted);font-size:11px;letter-spacing:.04em;text-transform:none}
+.nav-group-head .nav-group-title{font-weight:600}
+.nav-group-head .badge{margin-left:auto}
+.nav-group-note{font-size:10px;color:#7e93a8;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nav-settings{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--inv);cursor:pointer;text-align:left;font-size:13px;transition:background-color var(--t-fast),border-color var(--t-fast)}
+.nav-settings:hover{background:var(--sidebar-2)}
+.nav-settings.is-active{background:var(--sidebar-3);border-color:#2e5177}
+.nav-settings svg{color:#8fb3d9}
+.nav-settings .nav-note{margin-left:auto;font-size:10px;color:#93a7bb;font-variant-numeric:tabular-nums}
+.nav-row{position:relative;display:flex;align-items:stretch;border-radius:8px;border:1px solid transparent;margin-bottom:2px;transition:background-color var(--t-fast),border-color var(--t-fast)}
+.nav-row:hover{background:var(--sidebar-2)}
+.nav-row.is-active{background:var(--sidebar-3);border-color:#2e5177}
+.nav-row.is-confirm{background:#2a1d1d;border-color:#5d3030}
+.nav-main{flex:1 1 auto;min-width:0;display:block;padding:6px 8px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;border-radius:8px}
+.nav-title{display:block;font-size:12.5px;color:#e7eef6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-sub{display:flex;align-items:center;gap:5px;margin-top:2px;font-size:10.5px;color:#8498ac;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-sub code{font-size:10px;color:#9fb3c6}
+.row-actions{display:flex;align-items:center;gap:0;padding:0 2px;opacity:.22;transition:opacity var(--t-fast)}
+.nav-row:hover .row-actions,.nav-row:focus-within .row-actions{opacity:1}
+.row-confirm{display:flex;align-items:center;gap:4px;padding:0 4px}
+.nav-empty{padding:5px 10px 8px;font-size:11.5px;color:#7d90a4;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.nav-empty .btn{color:#b9cde0}
+.nav-empty .btn:hover{background:#22303f;color:#fff}
+.nav-divider{height:1px;margin:6px 8px;background:var(--sidebar-line)}
+.side-foot{padding:12px;border-top:1px solid var(--sidebar-line);font-size:11px;line-height:1.6;color:#7d90a4;background:#0c141d}
+.side-foot code{color:#a8bccf}
+
+.main{overflow-y:auto;padding:20px 24px 56px;min-width:0;background:var(--bg);scroll-behavior:auto}
+.pane{max-width:1020px;margin:0 auto}
+.pane-head{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap}
+.pane-title{min-width:0}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.pane-title h2{font-size:20px;line-height:1.3;font-weight:600;overflow-wrap:anywhere}
+.pane-sub{margin-top:5px;font-size:12px;color:var(--muted);max-width:64ch}
+.pane-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.crumbs{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap}
+.crumbs button{border:0;background:none;padding:0;color:var(--accent);cursor:pointer;font-size:12px}
+.crumbs button:hover{text-decoration:underline}
+.crumbs .sep{color:var(--faint)}
+
+/* ---------- 卡片与表单 ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-m);box-shadow:var(--shadow-1);margin-bottom:16px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-head h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card-head .hint{font-size:11px;color:var(--muted);font-weight:400}
+.card-body{padding:16px}
+.card-body > * + *{margin-top:14px}
+.badge{display:inline-flex;align-items:center;justify-content:center;height:18px;min-width:18px;padding:0 6px;border-radius:999px;background:var(--surface-3);color:var(--muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+.sidebar .badge{background:#22303f;color:#b7c9db}
+.hint{font-size:11px;color:var(--muted)}
+.subtle{color:var(--faint);font-size:11px}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.form-grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field-block{grid-column:1/-1;margin-top:14px;display:flex}
+.field-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#39485a;min-height:16px}
+.field-label em{font-style:normal;font-weight:400;font-size:11px;color:var(--faint)}
+.field-hint{font-size:11px;color:var(--muted);line-height:1.45}
+.field-hint.is-error{color:var(--danger)}
+.field-hint.is-warn{color:var(--warn)}
+.input,.select,.textarea{width:100%;min-width:0;border:1px solid var(--line-strong);background:#fff;border-radius:var(--radius-s);height:32px;padding:0 10px;font-size:13px;transition:border-color var(--t-fast),box-shadow var(--t-fast)}
+.input.mono{font-family:var(--mono);font-size:12px}
+.textarea{height:auto;min-height:70px;padding:8px 10px;line-height:1.55;resize:vertical}
+.input:hover,.select:hover,.textarea:hover{border-color:#a9b7c7}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,111,208,.16);outline:none}
+.input.is-invalid,.select.is-invalid{border-color:#d78079;box-shadow:0 0 0 3px rgba(185,47,42,.1)}
+.input:disabled,.select:disabled{background:var(--surface-2);color:var(--faint);cursor:not-allowed}
+.static-value{margin:0;padding:7px 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);font-size:12px;color:var(--muted);min-height:32px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line-strong);background:#fff;color:var(--text);border-radius:var(--radius-s);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background-color var(--t-fast),border-color var(--t-fast),color var(--t-fast),transform var(--t-fast),box-shadow var(--t-fast)}
+.btn:hover{background:var(--surface-2);border-color:#adbccb}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{background:var(--surface-3);color:var(--text);border-color:transparent}
+.btn.danger{color:var(--danger);border-color:#e6b7b2;background:#fff}
+.btn.danger:hover{background:var(--danger-soft);border-color:#dd9a94}
+.btn.sm{height:28px;padding:0 9px;font-size:12px}
+.btn.xs{height:23px;padding:0 7px;font-size:11px;border-radius:5px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.has-errors{border-color:#e6b7b2;color:var(--danger);background:var(--danger-soft)}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid transparent;background:transparent;border-radius:var(--radius-s);color:var(--muted);cursor:pointer;transition:background-color var(--t-fast),color var(--t-fast),transform var(--t-fast)}
+.icon-btn:hover{background:var(--surface-3);color:var(--text)}
+.icon-btn:active{transform:translateY(1px)}
+.icon-btn.xs{width:22px;height:22px;border-radius:4px}
+.icon-btn.danger:hover{background:var(--danger-soft);color:var(--danger)}
+.sidebar .icon-btn{color:#8ea3b8}
+.sidebar .icon-btn:hover{background:#233342;color:#fff}
+.sidebar .icon-btn.danger:hover{background:#3a2224;color:#ff9d95}
+.check{display:flex;align-items:center;gap:8px;font-size:12px;color:#39485a;cursor:pointer;padding:3px 0}
+.check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;margin:0}
+.check .hint{margin-left:2px}
+
+/* 行式列表（任务/奖励） */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;flex-wrap:wrap;gap:12px;padding:12px 16px;align-items:flex-start;transition:background-color var(--t-fast)}
+.row + .row{border-top:1px dashed var(--line)}
+.row:hover{background:#fbfcfe}
+.row-index{flex:0 0 18px;padding-top:23px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.row .field-trigger,.row .field-type{flex:1 1 160px;min-width:150px}
+.row .field-target{flex:2.4 1 250px;min-width:210px}
+.row .field-item{flex:2 1 230px;min-width:200px}
+.row .field-amount{flex:0 1 100px;min-width:88px}
+.row .field-count{flex:0 1 96px;min-width:84px}
+.row .field-display{flex:1.4 1 190px;min-width:160px}
+.row-remove{flex:0 0 auto;margin-top:23px}
+.none-note{margin:0;padding:7px 10px;min-height:32px;display:flex;align-items:center;border:1px dashed var(--line-strong);border-radius:var(--radius-s);font-size:11.5px;color:var(--muted);background:var(--surface-2)}
+.empty-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;font-size:12px;color:var(--muted);background:var(--surface-2);border-top:1px solid var(--line)}
+.empty-inline .btn{margin-left:auto}
+
+/* 图标选择器 + 可搜索下拉 */
+.combo{position:relative;display:flex;align-items:center;min-width:0}
+.combo .input{padding-right:28px}
+.combo-toggle{position:absolute;right:2px;top:2px;width:26px;height:28px;display:grid;place-items:center;border:0;background:transparent;color:var(--faint);border-radius:4px;cursor:pointer}
+.combo-toggle:hover{background:var(--surface-3);color:var(--text)}
+.combo-list{position:absolute;z-index:60;top:calc(100% + 4px);left:0;right:0;max-height:250px;overflow:auto;padding:4px;background:#fff;border:1px solid var(--line-strong);border-radius:8px;box-shadow:var(--shadow-2);list-style:none;animation:pop var(--t) both}
+.combo-list li[role="option"]{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:5px;font-family:var(--mono);font-size:11.5px;cursor:pointer;overflow-wrap:anywhere}
+.combo-list li[role="option"]:hover,.combo-list li.is-active{background:var(--surface-3)}
+.combo-list li[aria-selected="true"]{background:var(--accent-soft);color:#123f78}
+.combo-list li[aria-selected="true"].is-active{background:#d8e8fb}
+.combo-more{display:block;padding:6px 8px;border-top:1px solid var(--line);margin-top:4px;font-size:10.5px;color:var(--faint);font-family:var(--font)}
+.combo-empty{display:block;padding:8px;font-size:11.5px;color:var(--muted);font-family:var(--font)}
+@keyframes pop{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+
+/* 章节概览 / 统计 */
+.overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2);min-width:0}
+.stat span{font-size:11px;color:var(--muted)}
+.stat strong{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat em{font-style:normal;font-size:10.5px;color:var(--faint);overflow-wrap:anywhere}
+.steps{margin:0;padding-left:18px;font-size:12px;color:#39485a;display:flex;flex-direction:column;gap:6px}
+.steps code,.callout code{padding:1px 5px;background:var(--surface-3);border-radius:4px;font-size:11.5px;overflow-wrap:anywhere}
+.callout{margin:0;padding:9px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0;font-size:11.5px;color:#23496f;line-height:1.6}
+.callout.warn{border-left-color:#d39200;background:var(--warn-soft);color:#6e4a00}
+.chapter-card{margin-bottom:10px}
+.chapter-row{display:flex;align-items:center;gap:14px;padding:12px 16px;flex-wrap:wrap}
+.icon-tile{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border-radius:8px;background:linear-gradient(145deg,#e7eff9,#cfe0f3);color:#1c4a7d;font-family:var(--mono);font-size:12px;font-weight:600;border:1px solid #c2d6ec;overflow:hidden}
+.chapter-meta{flex:1 1 220px;min-width:0}
+.chapter-meta h3{font-size:13.5px;font-weight:600;overflow-wrap:anywhere}
+.chapter-meta .mono{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.chapter-meta .chapter-desc{margin-top:3px;font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.chapter-stats{display:flex;gap:6px;flex-wrap:wrap}
+.chapter-actions{display:flex;align-items:center;gap:2px;margin-left:auto}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:34px 20px;border:1px dashed var(--line-strong);border-radius:var(--radius-m);background:var(--surface-2);color:var(--muted);text-align:center;margin-bottom:16px}
+.empty strong{font-size:14px;color:var(--text);font-weight:600}
+.empty p{max-width:52ch;font-size:12px}
+.empty .btn-row{justify-content:center;margin-top:4px}
+
+/* 网格布局 */
+.posgrid-wrap{overflow-x:auto;padding-bottom:2px}
+.posgrid{display:grid;grid-template-columns:repeat(var(--cols,6),minmax(34px,1fr));gap:4px;padding:8px;background:var(--surface-3);border:1px solid var(--line);border-radius:8px;min-width:280px}
+.gcell{position:relative;min-height:44px;display:flex;flex-direction:column;gap:2px;padding:3px;background:#fff;border:1px solid var(--line);border-radius:5px;transition:background-color var(--t-fast),border-color var(--t-fast)}
+.gcell.is-over{background:#dcebfb;border-color:#7fa9d8}
+.gcell:empty::after{content:attr(data-coord);margin:auto;font-family:var(--mono);font-size:9px;color:#c3cedb}
+.gchip{display:block;width:100%;max-width:100%;padding:2px 4px;border:1px solid #b8d0ec;background:#e8f0fa;color:#174a7c;border-radius:4px;font-size:10px;line-height:1.25;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;transition:background-color var(--t-fast),border-color var(--t-fast)}
+.gchip:hover{background:#d8e8fb;border-color:#7fa9d8}
+.gchip.is-picked{outline:2px solid var(--accent);outline-offset:1px}
+.gchip.is-hidden{opacity:.55;text-decoration:line-through}
+.grid-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+/* 章节任务卡片 */
+.qcard{border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);margin-bottom:10px;box-shadow:var(--shadow-1);transition:border-color var(--t-fast),box-shadow var(--t-fast)}
+.qcard:hover{border-color:#b9c8d8}
+.qcard-head{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;flex-wrap:wrap}
+.qcard-main{flex:1 1 240px;min-width:0}
+.qcard-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qcard-title strong{font-size:13.5px;font-weight:600;overflow-wrap:anywhere}
+.qcard-title code{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.qcard-desc{margin-top:3px;font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.qcard-badges{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:6px}
+.qcard-actions{display:flex;align-items:center;gap:2px;margin-left:auto}
+.qcard-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 14px;border-top:1px dashed var(--line);background:var(--surface-2);border-radius:0 0 var(--radius-m) var(--radius-m);font-size:11.5px;color:var(--muted)}
+.qcard-foot label{display:flex;align-items:center;gap:5px}
+.qcard-foot .input{width:66px;height:26px;padding:0 6px;font-size:12px}
+.qcard-foot .pos-note{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.qcard-foot .spacer{flex:1 1 auto}
+.qcard-foot .hint{max-width:48ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-body .qcard:last-child{margin-bottom:0}
+.tag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:4px;background:var(--surface-3);color:var(--muted);font-size:10.5px;white-space:nowrap}
+.tag.hidden{background:var(--warn-soft);color:#7d5200}
+.tag.chain{background:var(--accent-soft);color:#1b4f86}
+
+/* 前置依赖 */
+.req-box{display:flex;flex-direction:column;gap:10px}
+.req-chips{display:flex;flex-wrap:wrap;gap:6px;min-height:26px}
+.req-chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 4px 0 8px;border-radius:999px;background:var(--accent-soft);border:1px solid #c8ddf5;color:#174a7c;font-size:11px;max-width:100%}
+.req-chip code{font-size:10.5px;overflow-wrap:anywhere}
+.req-chip button{display:grid;place-items:center;width:16px;height:16px;border:0;border-radius:50%;background:rgba(23,74,124,.08);color:#174a7c;cursor:pointer}
+.req-chip button:hover{background:rgba(23,74,124,.2)}
+.req-chip.unknown{background:var(--danger-soft);border-color:#ebc0bb;color:#8f1f1b}
+.req-chip.unknown button{background:rgba(143,31,27,.08);color:#8f1f1b}
+.req-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.req-tools .input{flex:1 1 200px}
+.req-list{max-height:196px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2);padding:6px}
+.req-opt{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:5px;font-size:11.5px;cursor:pointer;min-width:0}
+.req-opt:hover{background:#fff}
+.req-opt input{width:14px;height:14px;accent-color:var(--accent);margin:0;flex:0 0 auto}
+.req-opt .req-title{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.req-opt .req-title code{font-size:10.5px;color:var(--muted);margin-left:4px}
+.req-opt .tag{flex:0 0 auto}
+.req-opt.is-hidden{display:none}
+.req-opt.is-cycle{opacity:.55}
+.req-empty{padding:8px;font-size:11.5px;color:var(--muted)}
+
+/* 问题面板 */
+.issues{background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.issues-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:3}
+.issues-head h2{font-size:13px;font-weight:600}
+.issues-head .badge{margin-left:auto}
+.issues-list{padding:10px 12px 24px;overflow-y:auto}
+.issue-group{margin-bottom:12px}
+.issue-group-head{display:flex;align-items:center;gap:6px;padding:4px 2px 6px;font-size:11px;font-weight:600;color:var(--muted)}
+.issue-group-head .dot{width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.issue-group-head .dot.err{background:var(--danger)}
+.issue{display:flex;align-items:flex-start;gap:8px;width:100%;margin-bottom:6px;padding:8px 9px;text-align:left;border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:6px;background:var(--surface-2);cursor:pointer;transition:background-color var(--t-fast),border-color var(--t-fast),transform var(--t-fast)}
+.issue:hover{background:#fff;border-color:var(--line-strong);border-left-color:var(--warn)}
+.issue:active{transform:translateY(1px)}
+.issue.error{border-left-color:var(--danger);background:var(--danger-soft)}
+.issue.error:hover{background:#fce3e1}
+.issue .issue-icon{color:var(--warn);margin-top:1px}
+.issue.error .issue-icon{color:var(--danger)}
+.issue .issue-body{flex:1 1 auto;min-width:0}
+.issue .issue-msg{display:block;font-size:11.5px;line-height:1.45;color:var(--text);overflow-wrap:anywhere}
+.issue .issue-loc{display:block;margin-top:2px;font-size:10.5px;color:var(--muted);font-family:var(--mono);overflow-wrap:anywhere}
+.issues-empty{padding:24px 12px;text-align:center;color:var(--muted);font-size:12px}
+.issues-empty svg{margin:0 auto 8px;color:var(--ok)}
+
+/* 弹层 / 遮罩 */
+.drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(10,18,26,.42);z-index:70;animation:fade var(--t) both}
+body.nav-open .drawer-backdrop{display:block}
+#modalRoot{position:relative;z-index:90}
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,18,26,.45);display:grid;place-items:center;padding:20px;z-index:90;animation:fade var(--t) both}
+.modal{width:min(520px,100%);background:var(--surface);border-radius:var(--radius-l);border:1px solid var(--line);box-shadow:0 30px 80px -30px rgba(10,18,26,.6);animation:modalIn var(--t) both}
+.modal-head{padding:16px 18px 0}
+.modal-head h2{font-size:16px;font-weight:600}
+.modal-body{padding:8px 18px 16px;font-size:12.5px;color:#39485a;line-height:1.6;overflow-wrap:anywhere}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface-2);border-radius:0 0 var(--radius-l) var(--radius-l)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+.drop-overlay{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(15,24,35,.55);backdrop-filter:blur(2px);animation:fade var(--t-fast) both}
+.drop-overlay div{display:flex;flex-direction:column;gap:4px;align-items:center;padding:28px 40px;border:2px dashed #9fc4ec;border-radius:var(--radius-l);background:#fff;color:#174a7c}
+.drop-overlay strong{font-size:15px}
+.drop-overlay span{font-size:12px;color:var(--muted)}
+
+/* 新元素入场（一次性，不装饰持续状态） */
+.enter{animation:enter var(--t) both}
+@keyframes enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.is-target{box-shadow:0 0 0 3px rgba(31,111,208,.35)!important;border-radius:var(--radius-s)}
+
+/* 滚动条 */
+*{scrollbar-width:thin;scrollbar-color:#b9c6d4 transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#c4d0dd;border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+.sidebar::-webkit-scrollbar-thumb{background:#2b3b4c;background-clip:padding-box}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:1240px){
+  .app{overflow:auto}
+  .shell{display:flex;flex-wrap:wrap;flex:0 0 auto;min-height:0}
+  .sidebar{width:258px;overflow:visible}
+  .main{flex:1 1 520px;overflow:visible}
+  .issues{flex:1 1 100%;border-left:0;border-top:1px solid var(--line);max-height:none}
+  .issues-list{overflow:visible}
+}
+@media (max-width:1024px){
+  .app{overflow:auto}
+  .brand-text span{display:none}
+  .topbar-meta{display:none}
+  .shell{display:block}
+  .sidebar{position:fixed;top:0;bottom:0;left:0;width:280px;max-width:86vw;z-index:80;transform:translateX(-102%);transition:transform var(--t);box-shadow:var(--shadow-2)}
+  body.nav-open .sidebar{transform:none}
+  .nav-toggle{display:inline-flex}
+  .main{padding:16px 16px 40px;overflow:visible}
+  .issues{max-height:none;border-top:1px solid var(--line)}
+  body.issues-closed .shell{display:block}
+  .issues-list{overflow:visible}
+}
+@media (min-width:1025px){.nav-toggle{display:none}}
+@media (max-width:720px){
+  .topbar{padding:8px 10px;gap:8px;flex-wrap:wrap}
+  .topbar-actions{gap:4px}
+  .topbar-actions .btn{padding:0 8px}
+  .draft-chip{display:none}
+  .form-grid,.form-grid.cols-3,.overview{grid-template-columns:1fr}
+  .overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pane-title h2{font-size:18px}
+  .row{padding:12px}
+  .row .field-trigger,.row .field-target,.row .field-item,.row .field-display,.row .field-amount,.row .field-count{flex:1 1 100%;min-width:0}
+  .row-index{display:none}
+  .row-remove{margin-top:0}
+  .qcard-actions{margin-left:0}
+  .chapter-actions{width:100%;margin-left:0;justify-content:flex-end}
+}
+@media (max-width:560px){
+  .btn-label{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <button class="icon-btn nav-toggle" id="navToggle" aria-label="打开导航" aria-expanded="false" aria-controls="sidebar" data-icon="menu"></button>
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true" data-icon="scroll"></span>
+      <span class="brand-text"><strong>任务编辑器</strong><span>Habi Train Survive · 离线单文件</span></span>
+    </div>
+    <div class="topbar-meta" id="metaCounts"></div>
+    <div class="topbar-actions">
+      <span class="draft-chip" id="draftChip" data-dirty="0"><span class="dot" aria-hidden="true"></span><span id="draftText">草稿未保存</span></span>
+      <button class="btn sm" id="btnCopy" data-action="copy" title="复制完整 quests.json 到剪贴板"><span data-icon="copy"></span><span class="btn-label">复制 JSON</span></button>
+      <button class="btn sm" id="btnImport" data-action="import" title="选择本地 quests.json 导入"><span data-icon="upload"></span><span class="btn-label">导入</span></button>
+      <button class="btn sm primary" id="btnExport" data-action="export" title="下载 quests.json"><span data-icon="download"></span><span class="btn-label">导出 quests.json</span></button>
+      <button class="btn sm primary" id="btnOnlineSave" data-action="online-save" title="校验并直接保存回服务器的 quests.json" hidden><span data-icon="check"></span><span class="btn-label">保存到服务器</span></button>
+      <button class="btn sm" id="issuesToggle" aria-expanded="true" aria-controls="issuesPanel" title="显示或隐藏校验问题面板"><span data-icon="warning"></span><span class="btn-label">问题</span><span class="badge" id="issuesCount">0</span></button>
+    </div>
+  </header>
+  <div class="statusbar" id="statusbar" role="status" aria-live="polite" data-tone="info">
+    <span class="status-icon" id="statusIcon" data-icon="info"></span>
+    <span class="status-text" id="statusText">正在载入编辑器…</span>
+  </div>
+  <div class="notice" id="notice" hidden>
+    <span data-icon="warning"></span>
+    <span id="noticeText"></span>
+    <button class="btn xs" data-action="discard-draft">放弃本地草稿，重新载入服务器数据</button>
+    <button class="btn xs ghost" data-action="dismiss-notice" aria-label="关闭提示">关闭</button>
+  </div>
+  <div class="shell" id="shell">
+    <aside class="sidebar" id="sidebar" aria-label="任务导航">
+      <div class="side-search">
+        <label class="visually-hidden" for="searchInput">搜索任务或章节</label>
+        <input id="searchInput" class="side-input" type="search" placeholder="搜索标题或 ID" autocomplete="off" spellcheck="false">
+      </div>
+      <nav id="nav" class="nav" aria-label="任务列表"></nav>
+      <div class="side-foot">
+        完全离线：不发任何网络请求。编辑内容自动保存在本浏览器草稿中。导出后请覆盖服务器
+        <code>config/habi_train_survive/quests.json</code> 并执行 <code>/quest reload</code>。
+      </div>
+    </aside>
+    <main class="main" id="main" tabindex="-1"></main>
+    <aside class="issues" id="issuesPanel" aria-label="校验问题">
+      <div class="issues-head">
+        <h2>校验问题</h2>
+        <span class="badge" id="issuesCount2">0</span>
+      </div>
+      <div class="issues-list" id="issuesList"></div>
+    </aside>
+  </div>
+  <div class="drawer-backdrop" id="backdrop"></div>
+  <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  <div class="drop-overlay" id="dropOverlay" hidden>
+    <div><strong>松开以导入 quests.json</strong><span>将替换当前编辑内容（草稿已自动保存）</span></div>
+  </div>
+  <div id="modalRoot"></div>
+</div>
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   图标：全部内联 SVG，无外部依赖
+   ============================================================ */
+function svg(paths){ return '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + paths + '</svg>'; }
+var ICONS = {
+  menu: svg('<path d="M2.75 4.5h10.5M2.75 8h10.5M2.75 11.5h10.5"/>'),
+  scroll: svg('<path d="M4.25 2.75h7.5v10.5h-7.5z"/><path d="M6.25 5.5h3.5M6.25 8h3.5M6.25 10.5h2"/>'),
+  plus: svg('<path d="M8 3.25v9.5M3.25 8h9.5"/>'),
+  trash: svg('<path d="M2.75 4.75h10.5M6.25 4.75V3.25h3.5v1.5M4.25 4.75l.6 8.25h6.3l.6-8.25"/>'),
+  copy: svg('<rect x="5.75" y="5.75" width="7.5" height="7.5" rx="1.25"/><path d="M10.25 5.75V3.5a1 1 0 0 0-1-1H3.5a1 1 0 0 0-1 1v5.75a1 1 0 0 0 1 1h2.25"/>'),
+  up: svg('<path d="M8 12.5V3.5M4.5 7L8 3.5 11.5 7"/>'),
+  down: svg('<path d="M8 3.5v9M4.5 9L8 12.5 11.5 9"/>'),
+  warning: svg('<path d="M8 2.25l5.5 10.5H2.5L8 2.25z"/><path d="M8 6.25v3.25"/><circle cx="8" cy="11.1" r=".55" fill="currentColor" stroke="none"/>'),
+  info: svg('<circle cx="8" cy="8" r="5.75"/><path d="M8 7.25v3.5"/><circle cx="8" cy="5.1" r=".55" fill="currentColor" stroke="none"/>'),
+  check: svg('<path d="M2.75 8.5l3.25 3.25 7.25-7.5"/>'),
+  x: svg('<path d="M4 4l8 8M12 4l-8 8"/>'),
+  search: svg('<circle cx="7" cy="7" r="4.5"/><path d="M10.35 10.35L14 14"/>'),
+  download: svg('<path d="M8 2.75v7.5M4.75 7L8 10.25 11.25 7M2.75 13.25h10.5"/>'),
+  upload: svg('<path d="M8 10.25v-7.5M4.75 6L8 2.75 11.25 6M2.75 13.25h10.5"/>'),
+  chevronDown: svg('<path d="M4.5 6.5L8 10l3.5-3.5"/>'),
+  sliders: svg('<path d="M3 4.5h10M3 8h10M3 11.5h10"/><circle cx="6" cy="4.5" r="1.2" fill="#0f1823" stroke="none"/><circle cx="10" cy="8" r="1.2" fill="#0f1823" stroke="none"/><circle cx="5.5" cy="11.5" r="1.2" fill="#0f1823" stroke="none"/>'),
+  grid: svg('<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>'),
+  edit: svg('<path d="M3 13l.6-3.1 6.9-6.9 2.5 2.5-6.9 6.9L3 13z"/>')
+};
+
+/* ============================================================
+   注入数据、常量与工具
+   ============================================================ */
+var BUNDLE = window.QUEST_BUNDLE;
+var FALLBACK_TRIGGERS = [
+  { type:'kill_entity', label:'击杀实体', targetKind:'ENTITY', targetHint:'实体 ID、#标签或 *' },
+  { type:'mine_block', label:'挖掘方块', targetKind:'BLOCK', targetHint:'方块 ID、#标签或 *' },
+  { type:'place_block', label:'放置方块', targetKind:'BLOCK', targetHint:'方块 ID、#标签或 *' },
+  { type:'obtain_item', label:'获得物品', targetKind:'ITEM', targetHint:'物品 ID、#标签或 *' },
+  { type:'craft_item', label:'合成物品', targetKind:'ITEM', targetHint:'物品 ID、#标签或 *' },
+  { type:'use_item', label:'使用物品', targetKind:'ITEM', targetHint:'物品 ID、#标签或 *' },
+  { type:'submit_item', label:'提交物品', targetKind:'ITEM', targetHint:'物品 ID、#标签或 *' },
+  { type:'online_time', label:'在线时长(秒)', targetKind:'NONE', targetHint:'目标为空，数量单位为秒' }
+];
+var FALLBACK_REWARD_TYPES = [
+  { type:'coin', label:'金币' }, { type:'item', label:'物品' }, { type:'xp', label:'经验' }
+];
+var DRAFT_KEY = 'habiTrainSurvive.questEditor.draft.v1';
+var DRAFT_DELAY = 600;
+/* 在线模式：页面由服务器在线编辑器提供时，QUEST_ONLINE 携带令牌与写回地址。 */
+var ONLINE = (typeof window !== 'undefined' && window.QUEST_ONLINE && window.QUEST_ONLINE.token) ? window.QUEST_ONLINE : null;
+var COMBO_LIMIT = 120;
+var GRID_MAX_COLS = 12;
+var GRID_MAX_ROWS = 8;
+
+function toStr(v){ return typeof v === 'string' ? v : (v == null ? '' : String(v)); }
+function toNum(v){ if(v === '' || v == null || typeof v === 'boolean') return NaN; var n = Number(v); return isFinite(n) ? n : NaN; }
+function esc(v){ return toStr(v).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function numAttr(n){ return isFinite(n) ? String(n) : ''; }
+function isPosInt(v){ return typeof v === 'number' && isFinite(v) && Math.floor(v) === v && v > 0; }
+function isNonNegInt(v){ return typeof v === 'number' && isFinite(v) && Math.floor(v) === v && v >= 0; }
+function isTag(s){ var t = toStr(s).trim(); return t === '*' || t.charAt(0) === '#'; }
+function fmtClock(ts){ try { return new Date(ts).toLocaleTimeString('zh-CN', { hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' }); } catch(e){ return '--:--:--'; } }
+function reduceMotion(){ try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){ return false; } }
+function clone(v){ return JSON.parse(JSON.stringify(v)); }
+function uniquePush(arr, value){ if(arr.indexOf(value) === -1) arr.push(value); }
+function extraKeys(obj, known){ var out = {}; if(!obj || typeof obj !== 'object') return out; Object.keys(obj).forEach(function(k){ if(known.indexOf(k) === -1) out[k] = obj[k]; }); return out; }
+function pickQuestSource(raw){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  if(raw.quests && typeof raw.quests === 'object' && !Array.isArray(raw.quests)) return raw.quests;
+  if(Array.isArray(raw.daily) || Array.isArray(raw.weekly) || Array.isArray(raw.chapters) || raw.settings) return raw;
+  return null;
+}
+function normalizeKind(v){
+  var k = toStr(v).trim().toUpperCase();
+  if(k === 'BLOCK' || k === 'ENTITY' || k === 'ITEM' || k === 'NONE') return k;
+  return 'ITEM';
+}
+function kindLabel(kind){ return kind === 'BLOCK' ? '方块' : kind === 'ENTITY' ? '实体' : kind === 'NONE' ? '无' : '物品'; }
+function registryKeyForKind(kind){ return kind === 'BLOCK' ? 'blocks' : kind === 'ENTITY' ? 'entities' : 'items'; }
+
+/* ============================================================
+   注册表 / 触发器 / 奖励类型（来自注入数据，缺失时回退）
+   ============================================================ */
+function normalizeIdList(v){
+  if(!Array.isArray(v)) return [];
+  var seen = Object.create(null), out = [];
+  v.forEach(function(x){
+    var s = toStr(x).trim();
+    if(s && !seen[s]){ seen[s] = 1; out.push(s); }
+  });
+  out.sort(function(a,b){ return a < b ? -1 : a > b ? 1 : 0; });
+  return out;
+}
+var registry = { items:[], blocks:[], entities:[] };
+var registrySet = { items:Object.create(null), blocks:Object.create(null), entities:Object.create(null) };
+var hasRegistry = false;
+(function initRegistry(){
+  var src = (BUNDLE && BUNDLE.registry) ? BUNDLE.registry : null;
+  if(src){
+    registry.items = normalizeIdList(src.items);
+    registry.blocks = normalizeIdList(src.blocks);
+    registry.entities = normalizeIdList(src.entities);
+  }
+  Object.keys(registry).forEach(function(k){
+    registry[k].forEach(function(id){ registrySet[k][id] = 1; });
+  });
+  hasRegistry = registry.items.length > 0 || registry.blocks.length > 0 || registry.entities.length > 0;
+})();
+
+function normalizeTriggers(list){
+  var seen = Object.create(null), out = [];
+  (Array.isArray(list) ? list : []).forEach(function(t){
+    if(!t || typeof t !== 'object') return;
+    var type = toStr(t.type).trim();
+    if(!type || seen[type]) return;
+    seen[type] = 1;
+    out.push({ type:type, label:toStr(t.label) || type, targetKind:normalizeKind(t.targetKind), targetHint:toStr(t.targetHint) });
+  });
+  return out.length ? out : FALLBACK_TRIGGERS.slice();
+}
+function normalizeRewardTypes(list){
+  var seen = Object.create(null), out = [];
+  (Array.isArray(list) ? list : []).forEach(function(r){
+    if(!r || typeof r !== 'object') return;
+    var type = toStr(r.type).trim();
+    if(!type || seen[type]) return;
+    seen[type] = 1;
+    out.push({ type:type, label:toStr(r.label) || type });
+  });
+  return out.length ? out : FALLBACK_REWARD_TYPES.slice();
+}
+var TRIGGERS = normalizeTriggers(BUNDLE && BUNDLE.triggers);
+var REWARD_TYPES = normalizeRewardTypes(BUNDLE && BUNDLE.rewardTypes);
+var triggerMap = Object.create(null);
+var rewardTypeMap = Object.create(null);
+TRIGGERS.forEach(function(t){ triggerMap[t.type] = t; });
+REWARD_TYPES.forEach(function(r){ rewardTypeMap[r.type] = r; });
+
+/* ============================================================
+   状态与数据规范化
+   ============================================================ */
+var KNOWN_QUEST = ['id','title','description','icon','tasks','rewards','x','y','requires','hidden'];
+var KNOWN_TASK = ['type','target','amount','display'];
+var KNOWN_REWARD = ['type','amount','item','count'];
+var KNOWN_CHAPTER = ['id','title','description','icon','quests'];
+var KNOWN_SETTINGS = ['dailyCount','weeklyCount','timeZone'];
+
+function normTask(raw){
+  var t = (raw && typeof raw === 'object') ? raw : {};
+  return {
+    type: toStr(t.type),
+    target: toStr(t.target),
+    amount: toNum(t.amount),
+    display: toStr(t.display),
+    _extra: extraKeys(t, KNOWN_TASK)
+  };
+}
+function normReward(raw){
+  var r = (raw && typeof raw === 'object') ? raw : {};
+  return {
+    type: toStr(r.type) || 'coin',
+    amount: toNum(r.amount),
+    item: toStr(r.item),
+    count: toNum(r.count),
+    _extra: extraKeys(r, KNOWN_REWARD)
+  };
+}
+function normQuest(raw){
+  var q = (raw && typeof raw === 'object') ? raw : {};
+  return {
+    id: toStr(q.id),
+    title: toStr(q.title),
+    description: toStr(q.description),
+    icon: toStr(q.icon),
+    tasks: (Array.isArray(q.tasks) ? q.tasks : []).map(normTask),
+    rewards: (Array.isArray(q.rewards) ? q.rewards : []).map(normReward),
+    x: isFinite(toNum(q.x)) ? toNum(q.x) : 0,
+    y: isFinite(toNum(q.y)) ? toNum(q.y) : 0,
+    requires: (Array.isArray(q.requires) ? q.requires : []).filter(function(r){ return typeof r === 'string' && r.trim(); }).map(function(r){ return r.trim(); }),
+    hidden: q.hidden === true,
+    _extra: extraKeys(q, KNOWN_QUEST)
+  };
+}
+function normChapter(raw){
+  var c = (raw && typeof raw === 'object') ? raw : {};
+  return {
+    id: toStr(c.id),
+    title: toStr(c.title),
+    description: toStr(c.description),
+    icon: toStr(c.icon),
+    quests: (Array.isArray(c.quests) ? c.quests : []).map(normQuest),
+    _extra: extraKeys(c, KNOWN_CHAPTER)
+  };
+}
+
+var state = {
+  settings: { dailyCount:0, weeklyCount:0, timeZone:'Asia/Shanghai', _extra:{} },
+  daily: [],
+  weekly: [],
+  chapters: [],
+  ui: {
+    sel: { kind:'settings' },
+    search: '',
+    confirmDelete: null,
+    issues: [],
+    issuesOpen: window.innerWidth >= 1240,
+    navOpen: false,
+    dirty: false,
+    lastExportAt: null,
+    draftAt: null,
+    draftRestored: false,
+    noticeDismissed: false,
+    gridPick: null
+  }
+};
+
+function applyQuestData(data){
+  var src = (data && typeof data === 'object') ? data : {};
+  var rawSettings = (src.settings && typeof src.settings === 'object' && !Array.isArray(src.settings)) ? src.settings : {};
+  state.daily = (Array.isArray(src.daily) ? src.daily : []).map(normQuest);
+  state.weekly = (Array.isArray(src.weekly) ? src.weekly : []).map(normQuest);
+  state.chapters = (Array.isArray(src.chapters) ? src.chapters : []).map(normChapter);
+  var dc = toNum(rawSettings.dailyCount), wc = toNum(rawSettings.weeklyCount);
+  state.settings = {
+    dailyCount: isFinite(dc) ? dc : Math.min(5, state.daily.length),
+    weeklyCount: isFinite(wc) ? wc : Math.min(5, state.weekly.length),
+    timeZone: toStr(rawSettings.timeZone) || 'Asia/Shanghai',
+    _extra: extraKeys(rawSettings, KNOWN_SETTINGS)
+  };
+  state.ui.sel = { kind:'settings' };
+  state.ui.confirmDelete = null;
+  state.ui.gridPick = null;
+}
+
+/* ============================================================
+   DOM 引用
+   ============================================================ */
+var mainEl = document.getElementById('main');
+var navEl = document.getElementById('nav');
+var issuesListEl = document.getElementById('issuesList');
+var statusBar = document.getElementById('statusbar');
+var statusText = document.getElementById('statusText');
+var statusIcon = document.getElementById('statusIcon');
+var searchInput = document.getElementById('searchInput');
+var draftChip = document.getElementById('draftChip');
+var draftText = document.getElementById('draftText');
+var modalRoot = document.getElementById('modalRoot');
+var fileInput = document.getElementById('fileInput');
+var dropOverlay = document.getElementById('dropOverlay');
+var noticeEl = document.getElementById('notice');
+var noticeText = document.getElementById('noticeText');
+
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function initIcons(){
+  $$('[data-icon]').forEach(function(el){ var name = el.getAttribute('data-icon'); if(ICONS[name]) el.innerHTML = ICONS[name]; });
+}
+
+/* ============================================================
+   状态提示
+   ============================================================ */
+var statusTimer = null;
+function flash(message, tone){
+  tone = tone || 'info';
+  statusText.textContent = message;
+  statusBar.setAttribute('data-tone', tone);
+  statusIcon.innerHTML = ICONS[tone === 'ok' ? 'check' : (tone === 'err' || tone === 'warn') ? 'warning' : 'info'];
+  clearTimeout(statusTimer);
+  if(tone !== 'info'){
+    statusTimer = setTimeout(function(){
+      if(statusText.textContent === message) flash('就绪', 'info');
+    }, 9000);
+  }
+}
+function showNotice(message){
+  if(state.ui.noticeDismissed) return;
+  noticeText.textContent = message;
+  noticeEl.hidden = false;
+}
+function hideNotice(){ noticeEl.hidden = true; state.ui.noticeDismissed = true; }
+
+/* ============================================================
+   查询辅助
+   ============================================================ */
+function allQuestLocations(){
+  var out = [];
+  state.daily.forEach(function(q, i){ out.push({ q:q, loc:{ kind:'daily', index:i } }); });
+  state.weekly.forEach(function(q, i){ out.push({ q:q, loc:{ kind:'weekly', index:i } }); });
+  state.chapters.forEach(function(ch, ci){
+    ch.quests.forEach(function(q, qi){ out.push({ q:q, loc:{ kind:'cq', chapter:ci, index:qi }, chapter:ch }); });
+  });
+  return out;
+}
+function locLabel(loc){
+  if(!loc) return '';
+  if(loc.kind === 'settings') return '设置';
+  if(loc.kind === 'daily') return '每日 ' + (loc.index + 1);
+  if(loc.kind === 'weekly') return '每周 ' + (loc.index + 1);
+  if(loc.kind === 'chapter') return '章节 ' + (loc.index + 1);
+  if(loc.kind === 'cq') return '章节 ' + (loc.chapter + 1) + ' · 任务 ' + (loc.index + 1);
+  return '';
+}
+function findQuestById(id){
+  for(var ci = 0; ci < state.chapters.length; ci++){
+    var qs = state.chapters[ci].quests;
+    for(var qi = 0; qi < qs.length; qi++){ if(qs[qi].id === id) return qs[qi]; }
+  }
+  return null;
+}
+function questIdSet(){
+  var set = Object.create(null);
+  allQuestLocations().forEach(function(entry){ var id = toStr(entry.q.id).trim(); if(id) set[id] = 1; });
+  return set;
+}
+function uniqueQuestId(base){
+  var used = questIdSet(), id = base, n = 2;
+  while(used[id]){ id = base + '_' + n; n++; }
+  return id;
+}
+function uniqueChapterId(base){
+  var used = Object.create(null);
+  state.chapters.forEach(function(c){ used[c.id] = 1; });
+  var id = base, n = 2;
+  while(used[id]){ id = base + '_' + n; n++; }
+  return id;
+}
+function defaultIcon(){
+  if(registry.items.indexOf('minecraft:grass_block') !== -1) return 'minecraft:grass_block';
+  return registry.items.length ? registry.items[0] : 'minecraft:grass_block';
+}
+function pickRegistryId(key, preferred){
+  var list = registry[key] || [];
+  if(preferred && (!list.length || list.indexOf(preferred) !== -1)) return preferred;
+  if(list.length) return list[Math.floor(list.length / 2)];
+  return preferred || 'minecraft:stone';
+}
+
+/* ============================================================
+   草稿 / 脏标记
+   ============================================================ */
+var draftTimer = null;
+function markDirty(){
+  state.ui.dirty = true;
+  updateDirtyChip();
+}
+function updateDirtyChip(){
+  var text;
+  if(state.ui.draftAt) text = (state.ui.dirty ? '未导出 · 草稿 ' : '草稿 ') + fmtClock(state.ui.draftAt);
+  else text = state.ui.dirty ? '未保存 · 未导出' : '草稿未保存';
+  draftText.textContent = text;
+  draftChip.setAttribute('data-dirty', state.ui.dirty ? '1' : '0');
+  draftChip.title = state.ui.draftAt ? ('上次自动保存 ' + new Date(state.ui.draftAt).toLocaleString('zh-CN')) : '尚未保存草稿';
+}
+function scheduleDraft(){
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraftNow, DRAFT_DELAY);
+}
+function saveDraftNow(){
+  clearTimeout(draftTimer);
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ savedAt: Date.now(), data: buildExport() }));
+    state.ui.draftAt = Date.now();
+    updateDirtyChip();
+    if($('#draftInfo')) $('#draftInfo').textContent = draftInfoText();
+    return true;
+  } catch(e){
+    flash('无法写入本地草稿（浏览器可能禁止了 localStorage），请及时导出 JSON', 'warn');
+    return false;
+  }
+}
+function readDraft(){
+  try {
+    var raw = localStorage.getItem(DRAFT_KEY);
+    if(!raw) return null;
+    var obj = JSON.parse(raw);
+    if(!obj || !obj.data) return null;
+    return obj;
+  } catch(e){ return null; }
+}
+function draftInfoText(){
+  return state.ui.draftAt ? ('上次自动保存 ' + fmtClock(state.ui.draftAt)) : '尚未保存草稿';
+}
+
+/* ============================================================
+   数据操作
+   ============================================================ */
+function makeTask(type){
+  var trig = triggerMap[type] || TRIGGERS[0] || FALLBACK_TRIGGERS[0];
+  return normTask({ type:trig.type, target:trig.targetKind === 'NONE' ? '' : '*', amount:1, display:'' });
+}
+function makeQuest(kind){
+  return normQuest({
+    id: uniqueQuestId(kind === 'daily' ? 'daily_quest' : 'weekly_quest'),
+    title: '新任务', description: '', icon: defaultIcon(),
+    tasks: [makeTask('mine_block')],
+    rewards: [{ type:'coin', amount:100 }]
+  });
+}
+function makeChapterQuest(ch){
+  var pos = nextFreePosition(ch);
+  var q = normQuest({
+    id: uniqueQuestId('chapter_quest'),
+    title: '新章节任务', description: '', icon: defaultIcon(),
+    tasks: [makeTask('mine_block')],
+    rewards: [{ type:'coin', amount:100 }]
+  });
+  q.x = pos.x; q.y = pos.y;
+  return q;
+}
+function makeChapter(){
+  return normChapter({ id: uniqueChapterId('chapter_new'), title:'新章节', description:'', icon: defaultIcon(), quests:[] });
+}
+function nextFreePosition(ch){
+  var used = Object.create(null);
+  ch.quests.forEach(function(q){ used[numAttr(q.x) + ',' + numAttr(q.y)] = 1; });
+  var x = 0, y = 0, guard = 0;
+  while(used[x + ',' + y] && guard < 400){ x++; if(x > 5){ x = 0; y++; } guard++; }
+  return { x:x, y:y };
+}
+function cleanupRequires(ids){
+  var set = Object.create(null), count = 0;
+  ids.forEach(function(id){ set[id] = 1; });
+  state.chapters.forEach(function(ch){
+    ch.quests.forEach(function(q){
+      var kept = q.requires.filter(function(r){ if(set[r]){ count++; return false; } return true; });
+      q.requires = kept;
+    });
+  });
+  return count;
+}
+function collectRequires(ch){ return (ch.quests || []).reduce(function(a,q){ return a.concat(q.requires || []); }, []); }
+
+function addNew(kind){
+  if(kind === 'daily' || kind === 'weekly'){
+    var q = makeQuest(kind);
+    state[kind].push(q);
+    state.ui.sel = { kind:kind, index:state[kind].length - 1 };
+    state.ui.dirty = true;
+    renderAll(true);
+    saveDraftNow();
+    flash('已新建' + (kind === 'daily' ? '每日' : '每周') + '任务，请填写 ID 与标题', 'ok');
+    focusField('id');
+  } else if(kind === 'chapter'){
+    var ch = makeChapter();
+    state.chapters.push(ch);
+    state.ui.sel = { kind:'chapter', index:state.chapters.length - 1 };
+    state.ui.dirty = true;
+    renderAll(true);
+    saveDraftNow();
+    flash('已新建章节', 'ok');
+    focusField('chapter-id');
+  }
+}
+function addChapterQuest(ci){
+  var ch = state.chapters[ci];
+  if(!ch) return;
+  var q = makeChapterQuest(ch);
+  ch.quests.push(q);
+  state.ui.sel = { kind:'cq', chapter:ci, index:ch.quests.length - 1 };
+  state.ui.dirty = true;
+  renderAll(true);
+  saveDraftNow();
+  flash('已新建章节任务', 'ok');
+  focusField('id');
+}
+function duplicateQuest(arr, index, chapterIndex){
+  var q = arr[index];
+  if(!q) return;
+  var copy = clone(q);
+  copy.id = uniqueQuestId((q.id || 'quest') + '_copy');
+  copy.title = (q.title || '未命名任务') + ' 副本';
+  copy.requires = [];
+  copy._extra = clone(q._extra || {});
+  arr.splice(index + 1, 0, copy);
+  if(chapterIndex == null){
+    state.ui.sel = { kind: arr === state.daily ? 'daily' : 'weekly', index:index + 1 };
+  } else {
+    state.ui.sel = { kind:'cq', chapter:chapterIndex, index:index + 1 };
+  }
+  state.ui.dirty = true;
+  renderAll(true);
+  saveDraftNow();
+  flash('已复制任务，请检查新 ID', 'ok');
+}
+function deleteQuest(arr, index, kind, chapterIndex){
+  var q = arr[index];
+  if(!q) return;
+  arr.splice(index, 1);
+  var cleaned = q.id ? cleanupRequires([q.id]) : 0;
+  if(chapterIndex == null){
+    if(state.ui.sel.kind === kind && state.ui.sel.index === index){
+      state.ui.sel = arr.length ? { kind:kind, index:Math.min(index, arr.length - 1) } : { kind:'settings' };
+    } else if(state.ui.sel.kind === kind && state.ui.sel.index > index){
+      state.ui.sel.index--;
+    }
+  } else {
+    if(state.ui.sel.kind === 'cq' && state.ui.sel.chapter === chapterIndex){
+      if(state.ui.sel.index === index){ state.ui.sel = { kind:'chapter', index:chapterIndex }; }
+      else if(state.ui.sel.index > index){ state.ui.sel.index--; }
+    }
+  }
+  state.ui.dirty = true;
+  renderAll(true);
+  saveDraftNow();
+  flash('已删除任务“' + (q.title || q.id || '未命名') + '”' + (cleaned ? '，并清理 ' + cleaned + ' 处前置依赖' : ''), 'ok');
+}
+function moveItem(arr, index, delta){
+  var j = index + delta;
+  if(j < 0 || j >= arr.length) return false;
+  var tmp = arr[index]; arr[index] = arr[j]; arr[j] = tmp;
+  return true;
+}
+function moveQuest(kind, index, delta, chapterIndex){
+  var arr = chapterIndex == null ? state[kind] : state.chapters[chapterIndex].quests;
+  if(!moveItem(arr, index, delta)) return;
+  if(chapterIndex == null){
+    if(state.ui.sel.kind === kind){
+      if(state.ui.sel.index === index) state.ui.sel.index += delta;
+      else if(state.ui.sel.index === index + delta) state.ui.sel.index -= delta;
+    }
+  } else if(state.ui.sel.kind === 'cq' && state.ui.sel.chapter === chapterIndex){
+    if(state.ui.sel.index === index) state.ui.sel.index += delta;
+    else if(state.ui.sel.index === index + delta) state.ui.sel.index -= delta;
+  }
+  state.ui.dirty = true;
+  renderAll();
+  saveDraftNow();
+}
+function moveChapter(index, delta){
+  if(!moveItem(state.chapters, index, delta)) return;
+  if(state.ui.sel.kind === 'chapter' && state.ui.sel.index === index) state.ui.sel.index += delta;
+  else if(state.ui.sel.kind === 'chapter' && state.ui.sel.index === index + delta) state.ui.sel.index -= delta;
+  else if(state.ui.sel.kind === 'cq' && state.ui.sel.chapter === index) state.ui.sel.chapter += delta;
+  else if(state.ui.sel.kind === 'cq' && state.ui.sel.chapter === index + delta) state.ui.sel.chapter -= delta;
+  state.ui.dirty = true;
+  renderAll();
+  saveDraftNow();
+}
+function duplicateChapter(index){
+  var ch = state.chapters[index];
+  if(!ch) return;
+  var copy = normChapter(clone(ch));
+  copy.id = uniqueChapterId((ch.id || 'chapter') + '_copy');
+  copy.title = (ch.title || '未命名章节') + ' 副本';
+  copy.quests = copy.quests.map(function(q){
+    var c = clone(q);
+    c.id = uniqueQuestId((q.id || 'quest') + '_copy');
+    c.title = (q.title || '未命名任务') + ' 副本';
+    c.requires = [];
+    return c;
+  });
+  state.chapters.splice(index + 1, 0, copy);
+  state.ui.sel = { kind:'chapter', index:index + 1 };
+  state.ui.dirty = true;
+  renderAll(true);
+  saveDraftNow();
+  flash('已复制章节，任务 ID 已重新生成', 'ok');
+}
+/* ============================================================
+   渲染：导航
+   ============================================================ */
+var comboSeq = 0;
+function fmtCount(n){ return isFinite(n) ? String(n) : '—'; }
+
+function selectionNavKey(){
+  var sel = state.ui.sel;
+  if(sel.kind === 'settings') return 'settings';
+  if(sel.kind === 'chapters') return 'chapters';
+  if(sel.kind === 'daily' || sel.kind === 'weekly') return sel.kind + ':' + sel.index;
+  if(sel.kind === 'chapter' || sel.kind === 'cq') return 'chapter:' + sel.index;
+  return 'settings';
+}
+function matchesSearch(term, values){
+  if(!term) return true;
+  for(var i = 0; i < values.length; i++){
+    if(toStr(values[i]).toLowerCase().indexOf(term) !== -1) return true;
+  }
+  return false;
+}
+function navGroupHead(kind, title, count, note, addLabel){
+  return '<div class="nav-group-head">' +
+    '<span class="nav-group-title">' + esc(title) + '</span>' +
+    '<span class="badge">' + count + '</span>' +
+    '<span class="nav-group-note">' + esc(note || '') + '</span>' +
+    '<button class="icon-btn xs" type="button" data-add="' + kind + '" aria-label="' + esc(addLabel) + '" title="' + esc(addLabel) + '">' + ICONS.plus + '</button>' +
+    '</div>';
+}
+function navEmpty(kind, text){
+  return '<div class="nav-empty">' + esc(text) +
+    '<button class="btn xs ghost" type="button" data-add="' + kind + '">新建</button>' +
+    (state.daily.length + state.weekly.length + state.chapters.length === 0 ? '<button class="btn xs ghost" type="button" data-sample>插入示例</button>' : '') +
+    '</div>';
+}
+function navRow(kind, index, q, chapter){
+  var key = kind + ':' + index;
+  var active = (state.ui.sel.kind === kind && state.ui.sel.index === index) ||
+    (kind === 'chapter' && state.ui.sel.kind === 'cq' && state.ui.sel.chapter === index);
+  var confirm = state.ui.confirmDelete === key;
+  var sub = kind === 'chapter'
+    ? '<code>' + esc(q.id || '无 ID') + '</code><span>' + q.quests.length + ' 任务</span>'
+    : '<code>' + esc(q.id || '无 ID') + '</code><span>' + q.tasks.length + ' 目标</span><span>' + q.rewards.length + ' 奖励</span>';
+  var actions = '<span class="row-actions">' +
+    '<button class="icon-btn xs" type="button" data-move="up" data-kind="' + kind + '" data-index="' + index + '" aria-label="上移" title="上移"' + (index === 0 ? ' disabled' : '') + '>' + ICONS.up + '</button>' +
+    '<button class="icon-btn xs" type="button" data-move="down" data-kind="' + kind + '" data-index="' + index + '" aria-label="下移" title="下移"' + (index === (kind === 'chapter' ? state.chapters.length : (kind === 'daily' ? state.daily.length : state.weekly.length)) - 1 ? ' disabled' : '') + '>' + ICONS.down + '</button>' +
+    '<button class="icon-btn xs" type="button" data-dup="' + kind + ':' + index + '" aria-label="复制" title="复制">' + ICONS.copy + '</button>' +
+    '<button class="icon-btn xs danger" type="button" data-del="' + key + '" aria-label="删除" title="删除">' + ICONS.trash + '</button>' +
+    '</span>';
+  if(confirm){
+    actions = '<span class="row-confirm"><button class="btn xs danger" type="button" data-confirm-delete="' + key + '">删除</button>' +
+      '<button class="btn xs ghost" type="button" data-cancel-delete>取消</button></span>';
+  }
+  return '<div class="nav-row' + (active ? ' is-active' : '') + (confirm ? ' is-confirm' : '') + '" data-navkey="' + key + '">' +
+    '<button class="nav-main" type="button" data-select="' + key + '" aria-current="' + (active ? 'page' : 'false') + '">' +
+      '<span class="nav-title">' + esc(q.title || (kind === 'chapter' ? '未命名章节' : '未命名任务')) + '</span>' +
+      '<span class="nav-sub">' + sub + '</span>' +
+    '</button>' + actions +
+  '</div>';
+}
+function renderNav(){
+  var term = state.ui.search.trim().toLowerCase();
+  var activeKey = selectionNavKey();
+  var html = '';
+
+  html += '<div class="nav-group">' +
+    '<button class="nav-settings' + (activeKey === 'settings' ? ' is-active' : '') + '" type="button" data-select="settings" aria-current="' + (activeKey === 'settings' ? 'page' : 'false') + '">' +
+      ICONS.sliders + '<span>设置</span><span class="nav-note">刷新 ' + fmtCount(state.settings.dailyCount) + ' / ' + fmtCount(state.settings.weeklyCount) + '</span>' +
+    '</button>' +
+  '</div>';
+
+  html += '<div class="nav-group">' + navGroupHead('daily', '每日任务', state.daily.length, '刷新 ' + fmtCount(state.settings.dailyCount), '新建每日任务');
+  var dailyRows = state.daily.map(function(q, i){ return { q:q, i:i }; }).filter(function(e){ return matchesSearch(term, [e.q.title, e.q.id]); });
+  html += dailyRows.length
+    ? dailyRows.map(function(e){ return navRow('daily', e.i, e.q); }).join('')
+    : navEmpty('daily', term ? '没有匹配的每日任务' : '还没有每日任务');
+  html += '</div>';
+
+  html += '<div class="nav-group">' + navGroupHead('weekly', '每周任务', state.weekly.length, '刷新 ' + fmtCount(state.settings.weeklyCount), '新建每周任务');
+  var weeklyRows = state.weekly.map(function(q, i){ return { q:q, i:i }; }).filter(function(e){ return matchesSearch(term, [e.q.title, e.q.id]); });
+  html += weeklyRows.length
+    ? weeklyRows.map(function(e){ return navRow('weekly', e.i, e.q); }).join('')
+    : navEmpty('weekly', term ? '没有匹配的每周任务' : '还没有每周任务');
+  html += '</div>';
+
+  html += '<div class="nav-group">' + navGroupHead('chapter', '章节', state.chapters.length, '', '新建章节');
+  var chapterRows = state.chapters.map(function(ch, i){ return { ch:ch, i:i }; }).filter(function(e){ return matchesSearch(term, [e.ch.title, e.ch.id]); });
+  html += '<button class="nav-settings' + (activeKey === 'chapters' ? ' is-active' : '') + '" type="button" data-select="chapters" aria-current="' + (activeKey === 'chapters' ? 'page' : 'false') + '">' +
+    ICONS.grid + '<span>章节总览</span><span class="nav-note">' + state.chapters.reduce(function(a, c){ return a + c.quests.length; }, 0) + ' 任务</span>' +
+  '</button>';
+  html += chapterRows.length
+    ? chapterRows.map(function(e){ return navRow('chapter', e.i, e.ch); }).join('')
+    : '<div class="nav-empty">' + (term ? '没有匹配的章节' : '还没有章节') + '</div>';
+  html += '</div>';
+
+  html += '<div class="nav-divider"></div>' +
+    '<div class="nav-group-head"><span class="nav-group-title">数据</span></div>' +
+    '<button class="nav-settings" type="button" data-action="import">' + ICONS.upload + '<span>导入 quests.json</span></button>' +
+    '<button class="nav-settings" type="button" data-action="export">' + ICONS.download + '<span>导出 quests.json</span></button>';
+
+  navEl.innerHTML = html;
+}
+
+/* ============================================================
+   渲染：外壳与主面板
+   ============================================================ */
+function renderAll(resetScroll){
+  renderNav();
+  renderMain(resetScroll);
+  renderMeta();
+  renderIssues();
+}
+function renderMeta(){
+  var qCount = state.chapters.reduce(function(a, c){ return a + c.quests.length; }, 0);
+  $('#metaCounts').innerHTML =
+    '<span class="meta-chip">每日 <b>' + state.daily.length + '</b></span>' +
+    '<span class="meta-chip">每周 <b>' + state.weekly.length + '</b></span>' +
+    '<span class="meta-chip">章节 <b>' + state.chapters.length + '</b> · 任务 <b>' + qCount + '</b></span>';
+}
+function paneHead(eyebrow, title, sub, actions){
+  return '<header class="pane-head">' +
+    '<div class="pane-title">' +
+      '<p class="eyebrow">' + esc(eyebrow) + '</p>' +
+      '<h2>' + esc(title) + '</h2>' +
+      (sub ? '<p class="pane-sub">' + sub + '</p>' : '') +
+    '</div>' +
+    (actions ? '<div class="pane-actions">' + actions + '</div>' : '') +
+  '</header>';
+}
+function renderMain(resetScroll){
+  var sel = state.ui.sel, html = '';
+  if(sel.kind === 'settings'){ html = settingsView(); }
+  else if(sel.kind === 'daily' || sel.kind === 'weekly'){
+    var arr = state[sel.kind];
+    if(!arr[sel.index]){ state.ui.sel = { kind:'settings' }; html = settingsView(); }
+    else html = questView(sel, arr[sel.index]);
+  }
+  else if(sel.kind === 'chapters'){ html = chaptersView(); }
+  else if(sel.kind === 'chapter'){
+    if(!state.chapters[sel.index]){ state.ui.sel = { kind:'chapters' }; html = chaptersView(); }
+    else html = chapterView(sel.index, state.chapters[sel.index]);
+  }
+  else if(sel.kind === 'cq'){
+    var ch = state.chapters[sel.chapter];
+    if(!ch || !ch.quests[sel.index]){ state.ui.sel = ch ? { kind:'chapter', index:sel.chapter } : { kind:'chapters' }; html = ch ? chapterView(sel.chapter, ch) : chaptersView(); }
+    else html = questView(sel, ch.quests[sel.index]);
+  }
+  else { state.ui.sel = { kind:'settings' }; html = settingsView(); }
+  mainEl.innerHTML = html;
+  if(resetScroll) mainEl.scrollTop = 0;
+  updateSettingsHints();
+}
+
+/* ============================================================
+   视图：设置
+   ============================================================ */
+function countHint(kind){
+  var len = kind === 'daily' ? state.daily.length : state.weekly.length;
+  var value = kind === 'daily' ? state.settings.dailyCount : state.settings.weeklyCount;
+  var label = kind === 'daily' ? '每日' : '每周';
+  if(!len) return '模板为空；刷新数量必须为 0';
+  if(!isFinite(value)) return '模板 ' + len + ' 条；请输入刷新数量';
+  if(value > len) return '模板 ' + len + ' 条；刷新数量不能超过模板数量';
+  if(value === 0) return '模板 ' + len + ' 条；刷新数量不能为 0';
+  return '模板 ' + len + ' 条；每次刷新抽取 ' + value + ' 条';
+}
+function bundleMetaText(){
+  if(!BUNDLE) return '未注入服务器数据（直接打开模板）';
+  var at = toStr(BUNDLE.generatedAt);
+  return at ? ('服务器数据生成于 ' + at) : '已注入服务器数据';
+}
+function settingsView(){
+  var qCount = state.chapters.reduce(function(a, c){ return a + c.quests.length; }, 0);
+  var empty = state.daily.length === 0 && state.weekly.length === 0 && state.chapters.length === 0;
+  var html = '<div class="pane">' +
+    paneHead('模板设置', '每日 / 每周任务', '设置玩家每日与每周可接取的模板数量，以及刷新时区。导出只写入 settings、daily、weekly、chapters 四个字段。',
+      '<button class="btn sm" type="button" data-action="sample">' + ICONS.plus + '插入示例任务</button>') +
+    (!BUNDLE ? '<div class="callout warn">当前页面没有服务器注入数据（<code>QUEST_BUNDLE</code> 为 null）：可以从空配置开始编辑，或导入已有的 quests.json。</div>' : '') +
+    (empty ? '<div class="empty"><strong>当前没有任务数据</strong><p>可以导入服务器导出的 quests.json，或插入一组示例任务（每日 5 / 每周 5 / 1 个章节）快速开始。示例数据会标注“示例 ·”。</p><div class="btn-row"><button class="btn sm primary" type="button" data-action="import">导入 quests.json</button><button class="btn sm" type="button" data-action="sample">插入示例任务</button></div></div>' : '');
+
+  html += '<section class="card" data-ctx="settings">' +
+    '<div class="card-head"><h3>刷新设置</h3><span class="hint">' + esc(bundleMetaText()) + '</span></div>' +
+    '<div class="card-body">' +
+      '<div class="form-grid">' +
+        '<label class="field"><span class="field-label">每日刷新数量</span>' +
+          '<input class="input" type="number" min="0" step="1" data-field="dailyCount" data-focus="dailyCount" max="45" value="' + numAttr(state.settings.dailyCount) + '">' +
+          '<span class="field-hint" id="dailyCountHint">' + esc(countHint('daily')) + '</span></label>' +
+        '<label class="field"><span class="field-label">每周刷新数量</span>' +
+          '<input class="input" type="number" min="0" step="1" data-field="weeklyCount" data-focus="weeklyCount" max="45" value="' + numAttr(state.settings.weeklyCount) + '">' +
+          '<span class="field-hint" id="weeklyCountHint">' + esc(countHint('weekly')) + '</span></label>' +
+        '<label class="field"><span class="field-label">刷新时区</span>' +
+          '<input class="input mono" type="text" data-field="timeZone" data-focus="timeZone" value="' + esc(state.settings.timeZone) + '" placeholder="Asia/Shanghai" spellcheck="false">' +
+          '<span class="field-hint">IANA 时区名称，默认北京时间</span></label>' +
+      '</div>' +
+    '</div>' +
+  '</section>';
+
+  html += '<section class="card">' +
+    '<div class="card-head"><h3>模板概览</h3><span class="hint">' + esc(bundleMetaText()) + '</span></div>' +
+    '<div class="card-body"><div class="overview">' +
+      '<div class="stat"><span>每日任务</span><strong>' + state.daily.length + '</strong><em>玩家每天抽 ' + fmtCount(state.settings.dailyCount) + ' 条</em></div>' +
+      '<div class="stat"><span>每周任务</span><strong>' + state.weekly.length + '</strong><em>玩家每周抽 ' + fmtCount(state.settings.weeklyCount) + ' 条</em></div>' +
+      '<div class="stat"><span>章节</span><strong>' + state.chapters.length + '</strong><em>共 ' + qCount + ' 个章节任务</em></div>' +
+      '<div class="stat"><span>时区</span><strong style="font-size:14px;line-height:1.6;overflow-wrap:anywhere">' + esc(state.settings.timeZone || '未设置') + '</strong><em>每日刷新依据</em></div>' +
+    '</div></div>' +
+  '</section>';
+
+  html += '<section class="card">' +
+    '<div class="card-head"><h3>导出与部署</h3><span class="hint">UTF-8 · 2 空格缩进</span></div>' +
+    '<div class="card-body">' +
+      '<ol class="steps">' +
+        '<li>点击右上角 <strong>导出 quests.json</strong> 下载文件；也可以使用 <strong>复制 JSON</strong> 手动保存。</li>' +
+        '<li>将下载的 <code>quests.json</code> 覆盖服务器 <code>config/habi_train_survive/quests.json</code>。</li>' +
+        '<li>在服务器控制台执行 <code>/quest reload</code> 使配置生效。</li>' +
+      '</ol>' +
+      '<p class="callout">导出文件只包含 <code>settings</code>、<code>daily</code>、<code>weekly</code>、<code>chapters</code>；不会包含 registry、triggers 或版本包装。每日/每周任务不会写入 x、y、requires、hidden。</p>' +
+    '</div>' +
+  '</section>';
+
+  html += '<section class="card">' +
+    '<div class="card-head"><h3>本地草稿</h3><span class="hint" id="draftInfo">' + esc(draftInfoText()) + '</span></div>' +
+    '<div class="card-body">' +
+      '<p class="hint">编辑内容会在停止输入约 0.6 秒后自动保存到当前浏览器的 localStorage；关闭页面不会丢失。导出后仍需覆盖服务器文件。</p>' +
+      '<div class="btn-row">' +
+        '<button class="btn sm" type="button" data-action="save-draft">立即保存草稿</button>' +
+        '<button class="btn sm" type="button" data-action="discard-draft">' + (BUNDLE ? '放弃本地草稿，重新载入服务器数据' : '清空并重新开始') + '</button>' +
+        '<button class="btn sm ghost" type="button" data-action="clear-draft">删除本地草稿</button>' +
+      '</div>' +
+      '<p class="hint">上次导出：' + (state.ui.lastExportAt ? esc(new Date(state.ui.lastExportAt).toLocaleString('zh-CN')) : '本次会话尚未导出') + '</p>' +
+    '</div>' +
+  '</section>';
+
+  html += '</div>';
+  return html;
+}
+function updateSettingsHints(){
+  var d = $('#dailyCountHint'), w = $('#weeklyCountHint');
+  if(d) d.textContent = countHint('daily');
+  if(w) w.textContent = countHint('weekly');
+  var info = $('#draftInfo');
+  if(info) info.textContent = draftInfoText();
+}
+
+/* ============================================================
+   视图：任务表单
+   ============================================================ */
+function comboHtml(value, registryKey, opts){
+  opts = opts || {};
+  var id = 'cb' + (++comboSeq);
+  return '<div class="combo" data-combo>' +
+    '<input class="input mono combo-input" id="' + id + '" type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="' + id + '-list" ' +
+      'value="' + esc(value) + '" placeholder="' + esc(opts.placeholder || '搜索或输入 ID') + '" spellcheck="false" autocomplete="off" ' +
+      'data-registry="' + registryKey + '" ' +
+      (opts.field ? 'data-field="' + opts.field + '" ' : '') +
+      (opts.scope ? 'data-scope="' + opts.scope + '" data-index="' + opts.index + '" ' : '') +
+      (opts.focus ? 'data-focus="' + opts.focus + '" ' : '') +
+      (opts.ariaLabel ? 'aria-label="' + esc(opts.ariaLabel) + '" ' : '') +
+      '>' +
+    '<button class="combo-toggle" type="button" tabindex="-1" aria-label="浏览 ' + (registryKey === 'items' ? '物品' : registryKey === 'blocks' ? '方块' : '实体') + '列表">' + ICONS.chevronDown + '</button>' +
+    '<ul class="combo-list" id="' + id + '-list" role="listbox" hidden></ul>' +
+  '</div>';
+}
+function triggerOptions(selected){
+  var opts = '<option value="">— 选择触发器 —</option>';
+  if(selected && !triggerMap[selected]){ opts += '<option value="' + esc(selected) + '" selected>未知触发器：' + esc(selected) + '</option>'; }
+  TRIGGERS.forEach(function(t){
+    opts += '<option value="' + esc(t.type) + '"' + (t.type === selected ? ' selected' : '') + '>' + esc(t.label) + '</option>';
+  });
+  return opts;
+}
+function rewardOptions(selected){
+  var opts = '';
+  if(selected && !rewardTypeMap[selected]){ opts += '<option value="' + esc(selected) + '" selected>未知类型：' + esc(selected) + '</option>'; }
+  REWARD_TYPES.forEach(function(r){
+    opts += '<option value="' + esc(r.type) + '"' + (r.type === selected ? ' selected' : '') + '>' + esc(r.label) + '</option>';
+  });
+  return opts;
+}
+function questView(sel, q){
+  var ctx = sel.kind === 'cq' ? ('cq:' + sel.chapter + ':' + sel.index) : (sel.kind + ':' + sel.index);
+  var chapter = sel.kind === 'cq' ? state.chapters[sel.chapter] : null;
+  var eyebrow = sel.kind === 'daily' ? ('每日任务 · 第 ' + (sel.index + 1) + ' 项')
+    : sel.kind === 'weekly' ? ('每周任务 · 第 ' + (sel.index + 1) + ' 项')
+    : ('章节任务 · 第 ' + (sel.index + 1) + ' 项');
+  var crumbs = chapter
+    ? '<nav class="crumbs" aria-label="位置"><button type="button" data-action="back-chapter">' + esc(chapter.title || chapter.id || '章节') + '</button><span class="sep">/</span><span>' + esc(q.title || '未命名任务') + '</span></nav>'
+    : '';
+  var sub = sel.kind === 'cq'
+    ? '章节内任务：位置、前置依赖与隐藏状态会写回章节数据。'
+    : '每日 / 每周任务导出时不会写入 x、y、requires、hidden。';
+  var actions = (sel.kind === 'cq' ? '<button class="btn sm" type="button" data-action="back-chapter">' + ICONS.up + '返回章节</button>' : '') +
+    '<button class="btn sm" type="button" data-action="dup-quest">' + ICONS.copy + '复制</button>' +
+    '<button class="btn sm danger" type="button" data-action="del-quest">' + ICONS.trash + '删除</button>';
+
+  return '<div class="pane" data-ctx="' + ctx + '">' + crumbs +
+    paneHead(eyebrow, q.title || '（未命名任务）', sub, actions) +
+    basicCard(q, sel) +
+    tasksCard(q) +
+    rewardsCard(q) +
+    (sel.kind === 'cq' ? layoutCard(q, sel) : '') +
+  '</div>';
+}
+function basicCard(q, sel){
+  return '<section class="card">' +
+    '<div class="card-head"><h3>基本信息</h3><span class="hint">ID 全局唯一；图标取自 registry.items，也可直接手填</span></div>' +
+    '<div class="card-body">' +
+      '<div class="form-grid">' +
+        '<label class="field"><span class="field-label">任务 ID</span>' +
+          '<input class="input mono" type="text" data-field="id" data-focus="id" value="' + esc(q.id) + '" placeholder="例如 daily_mine_logs" spellcheck="false" autocomplete="off">' +
+          '<span class="field-hint">导出后不要随意更名，玩家进度按 ID 保存。</span></label>' +
+        '<label class="field"><span class="field-label">标题</span>' +
+          '<input class="input" type="text" data-field="title" data-focus="title" value="' + esc(q.title) + '" placeholder="玩家看到的任务名称"></label>' +
+        '<div class="field"><span class="field-label">图标</span>' +
+          comboHtml(q.icon, 'items', { field:'icon', focus:'icon', ariaLabel:'任务图标物品 ID', placeholder: hasRegistry ? '搜索物品 ID，可直接手填' : '无 registry 数据，可直接手填物品 ID' }) +
+          '<span class="field-hint">当前：' + esc(q.icon || '未设置') + '</span></div>' +
+        '<div class="field"><span class="field-label">组成</span>' +
+          '<p class="static-value">' + q.tasks.length + ' 个任务目标 · ' + q.rewards.length + ' 个奖励</p>' +
+          '<span class="field-hint">至少各一项才能通过校验</span></div>' +
+      '</div>' +
+      '<label class="field field-block"><span class="field-label">描述</span>' +
+        '<textarea class="textarea" rows="3" data-field="description" data-focus="description" placeholder="可选：向玩家说明任务要求">' + esc(q.description) + '</textarea></label>' +
+    '</div>' +
+  '</section>';
+}
+function taskRow(t, i){
+  var trig = triggerMap[t.type] || null;
+  var kind = trig ? trig.targetKind : 'ITEM';
+  var targetCell;
+  if(kind === 'NONE'){
+    targetCell = '<div class="field field-target"><span class="field-label">目标</span><p class="none-note">该触发器无需目标，数量单位为秒</p></div>';
+  } else {
+    targetCell = '<div class="field field-target"><span class="field-label">目标 <span class="subtle mono">' + kindLabel(kind) + '</span></span>' +
+      comboHtml(t.target, registryKeyForKind(kind), {
+        scope:'tasks', index:i, field:'target', focus:'task-' + i + '-target',
+        ariaLabel:'第 ' + (i + 1) + ' 项目标' + kindLabel(kind) + ' ID',
+        placeholder: trig && trig.targetHint ? trig.targetHint : '物品 ID、#标签或 *'
+      }) +
+      '<span class="field-hint">' + esc((trig && trig.targetHint) || '支持 #标签 与 *') + '</span></div>';
+  }
+  return '<div class="row task-row" data-task-index="' + i + '">' +
+    '<div class="row-index">' + (i + 1) + '</div>' +
+    '<div class="field field-trigger"><span class="field-label">触发器</span>' +
+      '<select class="select" data-scope="tasks" data-index="' + i + '" data-field="type" data-focus="task-' + i + '-type" aria-label="第 ' + (i + 1) + ' 项目标的触发器">' + triggerOptions(t.type) + '</select></div>' +
+    targetCell +
+    '<div class="field field-amount"><span class="field-label">数量</span>' +
+      '<input class="input" type="number" min="1" step="1" data-scope="tasks" data-index="' + i + '" data-field="amount" data-focus="task-' + i + '-amount" value="' + numAttr(t.amount) + '" aria-label="第 ' + (i + 1) + ' 项目标数量"></div>' +
+    '<div class="field field-display"><span class="field-label">描述 <em>可选</em></span>' +
+      '<input class="input" type="text" data-scope="tasks" data-index="' + i + '" data-field="display" value="' + esc(t.display) + '" placeholder="玩家看到的目标说明" aria-label="第 ' + (i + 1) + ' 项目标描述"></div>' +
+    '<button class="icon-btn danger row-remove" type="button" data-remove-task="' + i + '" aria-label="删除第 ' + (i + 1) + ' 项目标" title="删除该目标">' + ICONS.trash + '</button>' +
+  '</div>';
+}
+function tasksCard(q){
+  var body = q.tasks.length
+    ? '<div class="rows">' + q.tasks.map(function(t, i){ return taskRow(t, i); }).join('') + '</div>'
+    : '<div class="empty-inline">还没有任务目标，至少需要一项才能导出。<button class="btn sm" type="button" data-action="add-task" data-focus="add-task">添加第一项目标</button></div>';
+  return '<section class="card">' +
+    '<div class="card-head"><h3>任务目标 <span class="badge">' + q.tasks.length + '</span></h3>' +
+      '<button class="btn sm" type="button" data-action="add-task" data-focus="add-task">' + ICONS.plus + '添加目标</button></div>' +
+    body +
+  '</section>';
+}
+function rewardRow(r, i){
+  var isItem = r.type === 'item';
+  var numField = isItem ? 'count' : 'amount';
+  var numValue = isItem ? r.count : r.amount;
+  var numLabel = r.type === 'coin' ? '金币数量' : r.type === 'xp' ? '经验数量' : '物品数量';
+  return '<div class="row reward-row" data-reward-index="' + i + '">' +
+    '<div class="row-index">' + (i + 1) + '</div>' +
+    '<div class="field field-type"><span class="field-label">奖励类型</span>' +
+      '<select class="select" data-scope="rewards" data-index="' + i + '" data-field="type" data-focus="reward-' + i + '-type" aria-label="第 ' + (i + 1) + ' 个奖励类型">' + rewardOptions(r.type) + '</select></div>' +
+    '<div class="field field-item"' + (isItem ? '' : ' hidden') + '><span class="field-label">物品</span>' +
+      comboHtml(r.item, 'items', { scope:'rewards', index:i, field:'item', focus:'reward-' + i + '-item', ariaLabel:'第 ' + (i + 1) + ' 个奖励物品 ID', placeholder:'搜索物品 ID，可手填' }) +
+      '<span class="field-hint">支持 #标签 与 *</span></div>' +
+    '<div class="field field-amount field-count"><span class="field-label js-num-label">' + numLabel + '</span>' +
+      '<input class="input" type="number" min="1" step="1" data-scope="rewards" data-index="' + i + '" data-field="' + numField + '" data-focus="reward-' + i + '-amount" value="' + numAttr(numValue) + '" aria-label="第 ' + (i + 1) + ' 个奖励数量"></div>' +
+    '<button class="icon-btn danger row-remove" type="button" data-remove-reward="' + i + '" aria-label="删除第 ' + (i + 1) + ' 个奖励" title="删除该奖励">' + ICONS.trash + '</button>' +
+  '</div>';
+}
+function rewardsCard(q){
+  var body = q.rewards.length
+    ? '<div class="rows">' + q.rewards.map(function(r, i){ return rewardRow(r, i); }).join('') + '</div>'
+    : '<div class="empty-inline">还没有奖励，至少需要一项才能导出。<button class="btn sm" type="button" data-action="add-reward" data-focus="add-reward">添加第一项奖励</button></div>';
+  return '<section class="card">' +
+    '<div class="card-head"><h3>奖励 <span class="badge">' + q.rewards.length + '</span></h3>' +
+      '<button class="btn sm" type="button" data-action="add-reward" data-focus="add-reward">' + ICONS.plus + '添加奖励</button></div>' +
+    body +
+  '</section>';
+}
+function layoutCard(q, sel){
+  return '<section class="card">' +
+    '<div class="card-head"><h3>章节布局</h3><span class="hint">坐标用于章节内的任务网络布局</span></div>' +
+    '<div class="card-body">' +
+      '<div class="form-grid cols-3">' +
+        '<label class="field"><span class="field-label">网格 X</span>' +
+          '<input class="input" type="number" min="0" step="1" data-field="x" data-focus="x" max="64" value="' + numAttr(q.x) + '"></label>' +
+        '<label class="field"><span class="field-label">网格 Y</span>' +
+          '<input class="input" type="number" min="0" step="1" data-field="y" data-focus="y" max="64" value="' + numAttr(q.y) + '"></label>' +
+        '<div class="field"><span class="field-label">可见性</span>' +
+          '<label class="check"><input type="checkbox" data-field="hidden" data-focus="hidden"' + (q.hidden ? ' checked' : '') + '> 隐藏任务</label>' +
+          '<span class="field-hint">满足前置条件前不在任务书中显示</span></div>' +
+      '</div>' +
+      requiresBox(q, sel) +
+    '</div>' +
+  '</section>';
+}
+function requiresBox(q, sel){
+  var selfId = q.id;
+  var candidates = [];
+  state.chapters.forEach(function(ch, ci){
+    ch.quests.forEach(function(cq, qi){
+      if(ci === sel.chapter && qi === sel.index) return;
+      candidates.push({ id:cq.id, title:cq.title, chapter: ch.title || ch.id || ('章节 ' + (ci + 1)) });
+    });
+  });
+  var all = {};
+  allQuestLocations().forEach(function(e){ all[toStr(e.q.id)] = { q:e.q, loc:e.loc }; });
+  var chips = q.requires.length ? q.requires.map(function(id){
+    var known = all[id];
+    var title = known ? (known.q.title || '未命名任务') : '不存在';
+    return '<span class="req-chip' + (known ? '' : ' unknown') + '">' +
+      '<span>' + esc(title) + '</span><code>' + esc(id) + '</code>' +
+      '<button type="button" data-remove-require="' + esc(id) + '" aria-label="移除前置依赖 ' + esc(id) + '">' + ICONS.x + '</button>' +
+    '</span>';
+  }).join('') : '<span class="hint">尚未设置前置依赖</span>';
+
+  var options = candidates.map(function(c){
+    var checked = q.requires.indexOf(c.id) !== -1;
+    var cycle = !checked && c.id && wouldCycle(c.id, selfId);
+    return '<label class="req-opt' + (cycle ? ' is-cycle' : '') + '" data-req-text="' + esc((c.title + ' ' + c.id + ' ' + c.chapter).toLowerCase()) + '">' +
+      '<input type="checkbox" data-req-id="' + esc(c.id) + '" data-focus="req-' + esc(c.id) + '"' + (checked ? ' checked' : '') + (cycle ? ' disabled' : '') + (cycle ? ' title="会与当前任务形成循环依赖"' : '') + '>' +
+      '<span class="req-title">' + esc(c.title || c.id) + '<code>' + esc(c.id) + '</code></span>' +
+      '<span class="tag">' + esc(c.chapter) + '</span>' +
+    '</label>';
+  }).join('');
+
+  return '<div class="req-box" style="margin-top:14px">' +
+    '<div class="field-label">前置依赖 <span class="subtle">' + q.requires.length + ' 项</span></div>' +
+    '<div class="req-chips" id="reqChips">' + chips + '</div>' +
+    '<div class="req-tools">' +
+      '<label class="field" style="flex:1 1 220px"><span class="visually-hidden">筛选可依赖的任务</span>' +
+        '<input class="input" type="search" data-req-filter placeholder="筛选任务标题或 ID" autocomplete="off" aria-label="筛选可依赖的任务"></label>' +
+      '<span class="hint">只能引用章节内任务；循环依赖会被禁止。</span>' +
+    '</div>' +
+    '<div class="req-list" role="group" aria-label="可选择的前置依赖">' +
+      (candidates.length ? options : '<div class="req-empty">还没有其他章节任务可供选择。</div>') +
+    '</div>' +
+  '</div>';
+}
+function wouldCycle(startId, targetId){
+  if(!startId || !targetId) return false;
+  var seen = Object.create(null);
+  var stack = [startId];
+  while(stack.length){
+    var id = stack.pop();
+    if(id === targetId) return true;
+    if(seen[id]) continue;
+    seen[id] = 1;
+    var q = findQuestById(id);
+    if(q && q.requires) q.requires.forEach(function(r){ stack.push(r); });
+  }
+  return false;
+}
+
+/* ============================================================
+   视图：章节
+   ============================================================ */
+function chaptersView(){
+  var list = state.chapters;
+  var html = '<div class="pane">' +
+    paneHead('章节列表', '任务章节', '章节任务会导出 x、y、requires、hidden，用于任务网络布局。',
+      '<button class="btn sm primary" type="button" data-action="add-chapter">' + ICONS.plus + '新建章节</button>');
+
+  if(!list.length){
+    html += '<div class="empty"><strong>还没有章节</strong><p>章节用于组织有前后依赖的任务网络；每日和每周任务不需要章节。</p>' +
+      '<div class="btn-row"><button class="btn sm primary" type="button" data-action="add-chapter">新建章节</button>' +
+      '<button class="btn sm" type="button" data-action="sample">插入示例任务</button></div></div>';
+  } else {
+    html += list.map(function(ch, ci){
+      var hiddenCount = ch.quests.filter(function(q){ return q.hidden; }).length;
+      return '<article class="card chapter-card">' +
+        '<div class="chapter-row">' +
+          '<span class="icon-tile" aria-hidden="true">' + esc(initials(ch.icon)) + '</span>' +
+          '<div class="chapter-meta"><h3>' + esc(ch.title || '未命名章节') + '</h3>' +
+            '<p class="mono">' + esc(ch.id || '无 ID') + '</p>' +
+            (ch.description ? '<p class="chapter-desc">' + esc(ch.description) + '</p>' : '') + '</div>' +
+          '<div class="chapter-stats"><span class="badge">' + ch.quests.length + ' 任务</span>' +
+            (hiddenCount ? '<span class="tag hidden">' + hiddenCount + ' 隐藏</span>' : '') + '</div>' +
+          '<div class="chapter-actions">' +
+            '<button class="btn sm" type="button" data-edit-chapter="' + ci + '">' + ICONS.edit + '编辑章节</button>' +
+            '<button class="icon-btn" type="button" data-ch-move="up" data-index="' + ci + '" aria-label="上移章节" title="上移"' + (ci === 0 ? ' disabled' : '') + '>' + ICONS.up + '</button>' +
+            '<button class="icon-btn" type="button" data-ch-move="down" data-index="' + ci + '" aria-label="下移章节" title="下移"' + (ci === list.length - 1 ? ' disabled' : '') + '>' + ICONS.down + '</button>' +
+            '<button class="icon-btn" type="button" data-ch-dup="' + ci + '" aria-label="复制章节" title="复制">' + ICONS.copy + '</button>' +
+            '<button class="icon-btn danger" type="button" data-ch-del="' + ci + '" aria-label="删除章节" title="删除">' + ICONS.trash + '</button>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+  }
+  html += '</div>';
+  return html;
+}
+function initials(id){
+  var s = toStr(id);
+  var path = s.indexOf(':') !== -1 ? s.split(':')[1] : s;
+  path = path.replace(/[^a-z0-9_]/gi, '');
+  return path ? path.slice(0, 3) : '?';
+}
+function chapterView(ci, ch){
+  var ctx = 'chapter:' + ci;
+  var html = '<div class="pane">' +
+    '<nav class="crumbs" aria-label="位置"><button type="button" data-select="chapters">章节总览</button><span class="sep">/</span><span>' + esc(ch.title || '未命名章节') + '</span></nav>' +
+    paneHead('章节 · 第 ' + (ci + 1) + ' 个', ch.title || '未命名章节', ch.quests.length + ' 个任务 · 拖动网格或输入坐标调整位置',
+      '<button class="btn sm" type="button" data-action="add-chapter-quest">' + ICONS.plus + '新建任务</button>' +
+      '<button class="btn sm" type="button" data-ch-dup="' + ci + '">' + ICONS.copy + '复制章节</button>' +
+      '<button class="btn sm danger" type="button" data-ch-del="' + ci + '">' + ICONS.trash + '删除章节</button>') +
+    '<section class="card" data-ctx="' + ctx + '">' +
+      '<div class="card-head"><h3>章节信息</h3><span class="hint">章节 ID 用于导出，建议小写英文</span></div>' +
+      '<div class="card-body">' +
+        '<div class="form-grid">' +
+          '<label class="field"><span class="field-label">章节 ID</span>' +
+            '<input class="input mono" type="text" data-field="id" data-focus="chapter-id" value="' + esc(ch.id) + '" placeholder="例如 chapter_survival" spellcheck="false" autocomplete="off"></label>' +
+          '<label class="field"><span class="field-label">章节标题</span>' +
+            '<input class="input" type="text" data-field="title" data-focus="chapter-title" value="' + esc(ch.title) + '" placeholder="例如 生存入门"></label>' +
+          '<div class="field"><span class="field-label">章节图标</span>' +
+            comboHtml(ch.icon, 'items', { field:'icon', focus:'chapter-icon', ariaLabel:'章节图标物品 ID', placeholder: hasRegistry ? '搜索物品 ID，可手填' : '无 registry 数据，可手填物品 ID' }) + '</div>' +
+          '<label class="field"><span class="field-label">描述</span>' +
+            '<input class="input" type="text" data-field="description" data-focus="chapter-description" value="' + esc(ch.description) + '" placeholder="章节简介"></label>' +
+        '</div>' +
+      '</div>' +
+    '</section>';
+
+  if(!ch.quests.length){
+    html += '<div class="empty"><strong>章节内还没有任务</strong><p>新建任务后可以设置网格坐标与前置依赖。</p>' +
+      '<div class="btn-row"><button class="btn sm primary" type="button" data-action="add-chapter-quest">新建任务</button></div></div>';
+  } else {
+    html += '<section class="card">' +
+      '<div class="card-head"><h3>章节网格</h3><span class="hint">拖动方块到网格，或使用卡片下方的 X / Y 输入框</span></div>' +
+      '<div class="card-body"><div class="posgrid-wrap" id="posGridWrap">' + gridHtml(ch, ci) + '</div>' +
+        '<p class="grid-hint">点击网格中的任务卡片选中它，再点击空网格即可放置；也可以直接拖动。键盘用户请使用任务卡片下方的 X / Y 数字输入框。</p>' +
+      '</div>' +
+    '</section>';
+
+    html += '<section class="card">' +
+      '<div class="card-head"><h3>章节任务 <span class="badge">' + ch.quests.length + '</span></h3>' +
+        '<button class="btn sm" type="button" data-action="add-chapter-quest">' + ICONS.plus + '新建任务</button></div>' +
+      '<div class="card-body">' + ch.quests.map(function(q, qi){ return questCard(q, ci, qi); }).join('') + '</div>' +
+    '</section>';
+  }
+  html += '</div>';
+  return html;
+}
+function gridHtml(ch, ci){
+  var maxX = 5, maxY = 3;
+  ch.quests.forEach(function(q){
+    if(isFinite(q.x) && q.x > maxX) maxX = q.x;
+    if(isFinite(q.y) && q.y > maxY) maxY = q.y;
+  });
+  var cols = Math.max(6, Math.min(GRID_MAX_COLS, maxX + 1));
+  var rows = Math.max(4, Math.min(GRID_MAX_ROWS, maxY + 1));
+  var cells = '';
+  for(var y = 0; y < rows; y++){
+    for(var x = 0; x < cols; x++){
+      var here = ch.quests.map(function(q, i){ return { q:q, i:i }; }).filter(function(e){ return e.q.x === x && e.q.y === y; });
+      cells += '<div class="gcell" data-cell="' + x + ',' + y + '" data-coord="' + x + ',' + y + '">' +
+        here.map(function(e){
+          return '<button class="gchip' + (state.ui.gridPick === e.i ? ' is-picked' : '') + (e.q.hidden ? ' is-hidden' : '') + '" type="button" draggable="true" data-gchip="' + e.i + '" title="' + esc((e.q.title || e.q.id) + ' (' + x + ',' + y + ')') + '">' +
+            (e.i + 1) + '. ' + esc(e.q.title || e.q.id || '未命名') + '</button>';
+        }).join('') +
+      '</div>';
+    }
+  }
+  var outside = ch.quests.filter(function(q){ return q.x >= GRID_MAX_COLS || q.y >= GRID_MAX_ROWS || !isFinite(q.x) || !isFinite(q.y); }).length;
+  return '<div class="posgrid" id="posGrid" data-chapter="' + ci + '" role="group" aria-label="章节任务网格布局" style="--cols:' + cols + '">' + cells + '</div>' +
+    (outside ? '<p class="grid-hint">有 ' + outside + ' 个任务的坐标超出网格显示范围（最大 ' + GRID_MAX_COLS + '×' + GRID_MAX_ROWS + '），请在卡片中使用数字输入调整。</p>' : '');
+}
+function questCard(q, ci, qi){
+  var requiresText = q.requires.length ? esc(q.requires.join('、')) : '无';
+  return '<article class="qcard" data-ctx="cq:' + ci + ':' + qi + '">' +
+    '<div class="qcard-head">' +
+      '<div class="qcard-main">' +
+        '<div class="qcard-title"><strong>' + esc(q.title || '未命名任务') + '</strong><code>' + esc(q.id || '无 ID') + '</code></div>' +
+        (q.description ? '<p class="qcard-desc">' + esc(q.description) + '</p>' : '') +
+        '<div class="qcard-badges">' +
+          '<span class="tag">' + esc(q.icon || '未设置图标') + '</span>' +
+          '<span class="tag">' + q.tasks.length + ' 目标</span>' +
+          '<span class="tag">' + q.rewards.length + ' 奖励</span>' +
+          (q.requires.length ? '<span class="tag chain">前置 ' + q.requires.length + '</span>' : '') +
+          (q.hidden ? '<span class="tag hidden" data-hidden-tag="1">隐藏</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="qcard-actions">' +
+        '<button class="btn sm" type="button" data-action="edit-cq">' + ICONS.edit + '编辑</button>' +
+        '<button class="icon-btn" type="button" data-cq-move="up" data-index="' + qi + '" aria-label="上移任务" title="上移"' + (qi === 0 ? ' disabled' : '') + '>' + ICONS.up + '</button>' +
+        '<button class="icon-btn" type="button" data-cq-move="down" data-index="' + qi + '" aria-label="下移任务" title="下移"' + (qi === state.chapters[ci].quests.length - 1 ? ' disabled' : '') + '>' + ICONS.down + '</button>' +
+        '<button class="icon-btn" type="button" data-cq-dup="' + qi + '" aria-label="复制任务" title="复制">' + ICONS.copy + '</button>' +
+        '<button class="icon-btn danger" type="button" data-cq-del="' + qi + '" aria-label="删除任务" title="删除">' + ICONS.trash + '</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="qcard-foot">' +
+      '<label>X <input class="input" type="number" min="0" step="1" data-field="x" data-focus="cq-' + ci + '-' + qi + '-x" max="64" value="' + numAttr(q.x) + '" aria-label="任务 ' + esc(q.title || q.id) + ' 的网格 X"></label>' +
+      '<label>Y <input class="input" type="number" min="0" step="1" data-field="y" data-focus="cq-' + ci + '-' + qi + '-y" max="64" value="' + numAttr(q.y) + '" aria-label="任务 ' + esc(q.title || q.id) + ' 的网格 Y"></label>' +
+      '<label class="check"><input type="checkbox" data-field="hidden" data-focus="cq-' + ci + '-' + qi + '-hidden"' + (q.hidden ? ' checked' : '') + '> 隐藏</label>' +
+      '<span class="spacer"></span>' +
+      '<span class="hint">前置：' + requiresText + '</span>' +
+    '</div>' +
+  '</article>';
+}
+/* ============================================================
+   校验
+   ============================================================ */
+function inRegistry(kind, id){
+  if(!hasRegistry || isTag(id)) return true;
+  var key = registryKeyForKind(kind);
+  if(!registry[key].length) return true;
+  return registrySet[key][id] === 1;
+}
+function detectCycles(){
+  var graph = Object.create(null), stateMap = Object.create(null), cycles = Object.create(null), stack = [];
+  state.chapters.forEach(function(ch){
+    ch.quests.forEach(function(q){
+      if(!graph[q.id]) graph[q.id] = [];
+      var arr = graph[q.id];
+      (q.requires || []).forEach(function(r){ if(arr.indexOf(r) === -1) arr.push(r); });
+    });
+  });
+  function dfs(id){
+    var st = stateMap[id] || 0;
+    if(st === 1){
+      var idx = stack.indexOf(id);
+      var cyc = stack.slice(idx >= 0 ? idx : 0).concat(id);
+      cyc.forEach(function(n){ if(!cycles[n]) cycles[n] = cyc.join(' → '); });
+      return;
+    }
+    if(st === 2) return;
+    stateMap[id] = 1;
+    stack.push(id);
+    (graph[id] || []).forEach(function(n){ if(graph[n]) dfs(n); });
+    stack.pop();
+    stateMap[id] = 2;
+  }
+  Object.keys(graph).forEach(dfs);
+  return cycles;
+}
+function computeIssues(){
+  var issues = [];
+  function issue(level, msg, loc, where){
+    issues.push({ level:level, msg:msg, loc:loc || { kind:'settings' }, where: where || locLabel(loc) });
+  }
+  var locations = allQuestLocations();
+  var idCount = Object.create(null), idSet = Object.create(null);
+  locations.forEach(function(e){
+    var id = toStr(e.q.id).trim();
+    if(id){ idCount[id] = (idCount[id] || 0) + 1; idSet[id] = 1; }
+  });
+  var chapterIdCount = Object.create(null);
+  state.chapters.forEach(function(ch){ var id = toStr(ch.id).trim(); if(id) chapterIdCount[id] = (chapterIdCount[id] || 0) + 1; });
+
+  /* 设置 */
+  var s = state.settings;
+  function checkCount(field, len, label){
+    var v = s[field];
+    var loc = { kind:'settings', field:field };
+    if(!isFinite(v)){ issue('error', label + '刷新数量必须是数字', loc, '设置'); return; }
+    if(!isNonNegInt(v)){ issue('error', label + '刷新数量必须是非负整数', loc, '设置'); return; }
+    if(v > 45){ issue('error', label + '刷新数量必须在 0..45（服务器限制）', loc, '设置'); return; }
+    if(len === 0 && v > 0){ issue('error', '模板为空，' + label + '刷新数量必须为 0，否则导出会清空原有设置', loc, '设置'); return; }
+    if(len > 0 && v === 0){ issue('error', label + '模板有 ' + len + ' 条，刷新数量不能为 0（导出会覆盖为非空设置）', loc, '设置'); return; }
+    if(v > len){ issue('error', label + '刷新数量不能超过模板数量（' + len + ' 条）', loc, '设置'); }
+  }
+  checkCount('dailyCount', state.daily.length, '每日');
+  checkCount('weeklyCount', state.weekly.length, '每周');
+  if(!toStr(s.timeZone).trim()){
+    issue('warn', '刷新时区不能为空', { kind:'settings', field:'timeZone' }, '设置');
+  } else {
+    var tzOk = true;
+    try { new Intl.DateTimeFormat('en-US', { timeZone:s.timeZone }); } catch(e){ tzOk = false; }
+    if(!tzOk) issue('warn', '时区“' + s.timeZone + '”无法被浏览器识别', { kind:'settings', field:'timeZone' }, '设置');
+  }
+
+  /* 章节元数据 */
+  state.chapters.forEach(function(ch, ci){
+    var loc = { kind:'chapter', index:ci, field:'chapter-id' };
+    var where = '章节 ' + (ci + 1);
+    if(!toStr(ch.id).trim()) issue('error', '章节 ID 不能为空', loc, where);
+    else if(chapterIdCount[ch.id.trim()] > 1) issue('error', '章节 ID“' + ch.id + '”重复', loc, where);
+    if(!toStr(ch.title).trim()) issue('error', '章节标题不能为空', { kind:'chapter', index:ci, field:'chapter-title' }, where);
+    if(!toStr(ch.icon).trim()) issue('warn', '章节未设置图标', { kind:'chapter', index:ci, field:'chapter-icon' }, where);
+    else if(!inRegistry('ITEM', ch.icon)) issue('warn', '章节图标“' + ch.icon + '”不在 registry.items 中', { kind:'chapter', index:ci, field:'chapter-icon' }, where);
+    if(!ch.quests.length) issue('warn', '章节内还没有任务', { kind:'chapter', index:ci, field:'add-chapter-quest' }, where);
+  });
+
+  /* 任务 */
+  var cycles = detectCycles();
+  locations.forEach(function(entry){
+    var q = entry.q, loc = entry.loc, where = locLabel(loc);
+    var qid = toStr(q.id).trim();
+    if(!qid){
+      issue('error', '任务 ID 不能为空', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'id' }, where);
+    } else {
+      if(!/^[A-Za-z0-9_.-]{1,64}$/.test(qid)) issue('error', '任务 ID 只能使用字母、数字、下划线、点和短横线（1-64 位）', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'id' }, where);
+      if(idCount[qid] > 1) issue('error', '任务 ID“' + qid + '”重复，必须全局唯一', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'id' }, where);
+    }
+    if(!toStr(q.title).trim()) issue('error', '任务标题不能为空', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'title' }, where);
+    if(!toStr(q.icon).trim()) issue('warn', '任务未设置图标，服务器可能使用默认物品', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'icon' }, where);
+    else if(!inRegistry('ITEM', q.icon)) issue('warn', '图标“' + q.icon + '”不在 registry.items 中', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'icon' }, where);
+
+    if(!q.tasks.length) issue('error', '至少需要一个任务目标', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'add-task' }, where);
+    q.tasks.forEach(function(t, ti){
+      var tLabel = '目标 ' + (ti + 1);
+      var tLoc = { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'task-' + ti + '-type' };
+      var trig = triggerMap[t.type];
+      if(!toStr(t.type).trim()){ issue('error', tLabel + '：未选择触发器', tLoc, where); }
+      else if(!trig){ issue('error', tLabel + '：触发器“' + t.type + '”不在服务器触发器列表中，导入后会被拒绝', tLoc, where); }
+      var kind = trig ? trig.targetKind : 'ITEM';
+      if(kind !== 'NONE'){
+        var targetLoc = { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'task-' + ti + '-target' };
+        if(!toStr(t.target).trim()) issue('error', tLabel + '：目标不能为空，可填 * 表示任意', targetLoc, where);
+        else if(!inRegistry(kind, t.target)) issue('warn', tLabel + '：' + kindLabel(kind) + '“' + t.target + '”不在 registry 中', targetLoc, where);
+      }
+      if(!isPosInt(t.amount)) issue('error', tLabel + '：数量必须是正整数', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'task-' + ti + '-amount' }, where);
+    });
+
+    if(!q.rewards.length) issue('error', '至少需要一个奖励', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'add-reward' }, where);
+    q.rewards.forEach(function(r, ri){
+      var rLabel = '奖励 ' + (ri + 1);
+      var rLoc = { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-type' };
+      if(!toStr(r.type).trim()){ issue('error', rLabel + '：未选择奖励类型', rLoc, where); return; }
+      if(!rewardTypeMap[r.type]){ issue('error', rLabel + '：奖励类型“' + r.type + '”不在服务器奖励列表中，导入后会被拒绝', rLoc, where); }
+      if(r.type === 'item'){
+        if(!toStr(r.item).trim()) issue('error', rLabel + '：物品不能为空', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-item' }, where);
+        else if(!inRegistry('ITEM', r.item)) issue('warn', rLabel + '：物品“' + r.item + '”不在 registry.items 中', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-item' }, where);
+        if(!isPosInt(r.count)) issue('error', rLabel + '：物品数量必须是正整数', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-amount' }, where);
+        else if(r.count > 2304) issue('error', rLabel + '：物品数量不能超过 2304', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-amount' }, where);
+      } else {
+        if(!isPosInt(r.amount)) issue('error', rLabel + '：数量必须是正整数', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-amount' }, where);
+        else if(r.type === 'coin' && r.amount > 1e12) issue('error', rLabel + '：金币数量超出服务器上限', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-amount' }, where);
+        else if(r.type === 'xp' && r.amount > 1000000) issue('error', rLabel + '：经验数量不能超过 1000000', { kind:loc.kind, chapter:loc.chapter, index:loc.index, field:'reward-' + ri + '-amount' }, where);
+      }
+    });
+
+    if(loc.kind === 'cq'){
+      if(!isNonNegInt(q.x) || q.x > 64) issue('error', '网格 X 必须是 0..64 的整数', { kind:'cq', chapter:loc.chapter, index:loc.index, field:'x' }, where);
+      if(!isNonNegInt(q.y) || q.y > 64) issue('error', '网格 Y 必须是 0..64 的整数', { kind:'cq', chapter:loc.chapter, index:loc.index, field:'y' }, where);
+      (q.requires || []).forEach(function(rid){
+        if(rid === q.id){
+          issue('error', '任务不能依赖自身', { kind:'cq', chapter:loc.chapter, index:loc.index, field:'requires' }, where);
+        } else if(!idSet[rid]){
+          issue('error', '前置依赖“' + rid + '”不存在', { kind:'cq', chapter:loc.chapter, index:loc.index, field:'requires' }, where);
+        } else {
+          var target = null;
+          for(var i = 0; i < locations.length; i++){ if(locations[i].q.id === rid){ target = locations[i]; break; } }
+          if(target && target.loc.kind !== 'cq') issue('warn', '前置依赖“' + rid + '”不是章节任务，游戏中可能不生效', { kind:'cq', chapter:loc.chapter, index:loc.index, field:'requires' }, where);
+        }
+      });
+      if(cycles[q.id]) issue('error', '前置依赖形成循环：' + cycles[q.id], { kind:'cq', chapter:loc.chapter, index:loc.index, field:'requires' }, where);
+    }
+  });
+
+  return issues;
+}
+
+/* ============================================================
+   问题面板
+   ============================================================ */
+function renderIssues(){
+  var issues = computeIssues();
+  state.ui.issues = issues;
+  var errors = issues.filter(function(i){ return i.level === 'error'; }).length;
+  var warns = issues.length - errors;
+  var countText = String(issues.length);
+  var badge = $('#issuesCount'), badge2 = $('#issuesCount2');
+  if(badge) badge.textContent = countText;
+  if(badge2) badge2.textContent = countText;
+  var toggle = $('#issuesToggle');
+  if(toggle){
+    toggle.classList.toggle('has-errors', errors > 0);
+    toggle.setAttribute('title', errors ? (errors + ' 个错误，' + warns + ' 个警告') : (warns ? (warns + ' 个警告') : '未发现问题'));
+  }
+  if(!issues.length){
+    issuesListEl.innerHTML = '<div class="issues-empty">' + ICONS.check + '未发现问题<br><span class="hint">当前配置可以导出</span></div>';
+    return;
+  }
+  function group(level){
+    var list = issues.map(function(it, i){ return { it:it, i:i }; }).filter(function(e){ return e.it.level === level; });
+    if(!list.length) return '';
+    return '<div class="issue-group"><div class="issue-group-head"><span class="dot' + (level === 'error' ? ' err' : '') + '"></span>' +
+      (level === 'error' ? '错误' : '警告') + ' ' + list.length + '</div>' +
+      list.map(function(e){
+        return '<button class="issue' + (level === 'error' ? ' error' : '') + '" type="button" data-issue="' + e.i + '">' +
+          '<span class="issue-icon">' + ICONS.warning + '</span>' +
+          '<span class="issue-body"><span class="issue-msg">' + esc(e.it.msg) + '</span>' +
+          '<span class="issue-loc">' + esc(e.it.where) + '</span></span></button>';
+      }).join('') + '</div>';
+  }
+  issuesListEl.innerHTML = group('error') + group('warn');
+}
+function gotoIssue(index){
+  var it = state.ui.issues[index];
+  if(!it) return;
+  var loc = it.loc;
+  if(loc.kind === 'settings') state.ui.sel = { kind:'settings' };
+  else if(loc.kind === 'daily') state.ui.sel = { kind:'daily', index:loc.index };
+  else if(loc.kind === 'weekly') state.ui.sel = { kind:'weekly', index:loc.index };
+  else if(loc.kind === 'chapter') state.ui.sel = { kind:'chapter', index:loc.index };
+  else if(loc.kind === 'cq') state.ui.sel = { kind:'cq', chapter:loc.chapter, index:loc.index };
+  renderNav();
+  renderMain(true);
+  renderMeta();
+  renderIssues();
+  requestAnimationFrame(function(){ focusField(loc.field); });
+}
+function focusField(name){
+  if(!name) return;
+  var el = document.querySelector('[data-focus="' + String(name).replace(/"/g, '\\"') + '"]');
+  if(!el){ mainEl.focus(); return; }
+  try { el.scrollIntoView({ block:'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); } catch(e){ el.scrollIntoView(); }
+  setTimeout(function(){
+    try { el.focus({ preventScroll:true }); } catch(e){ el.focus(); }
+    el.classList.add('is-target');
+    setTimeout(function(){ el.classList.remove('is-target'); }, 1400);
+  }, 30);
+}
+
+/* ============================================================
+   字段编辑
+   ============================================================ */
+function resolveEntity(ctx){
+  var p = toStr(ctx).split(':');
+  if(p[0] === 'settings') return state.settings;
+  if(p[0] === 'daily') return state.daily[+p[1]];
+  if(p[0] === 'weekly') return state.weekly[+p[1]];
+  if(p[0] === 'chapter') return state.chapters[+p[1]];
+  if(p[0] === 'cq'){ var ch = state.chapters[+p[1]]; return ch ? ch.quests[+p[2]] : null; }
+  return null;
+}
+function entityFor(el){
+  var host = el.closest('[data-ctx]');
+  return host ? resolveEntity(host.getAttribute('data-ctx')) : null;
+}
+function commitField(el){
+  var ent = entityFor(el);
+  if(!ent) return;
+  var field = el.getAttribute('data-field');
+  if(!field) return;
+  var target = ent;
+  if(el.dataset.scope){
+    var arr = ent[el.dataset.scope];
+    target = arr ? arr[+el.dataset.index] : null;
+  }
+  if(!target) return;
+  var value;
+  if(el.type === 'checkbox') value = el.checked;
+  else if(el.type === 'number') value = el.value.trim() === '' ? NaN : Number(el.value);
+  else value = el.value;
+  target[field] = value;
+
+  markDirty();
+  scheduleDraft();
+  renderIssues();
+  if(el.closest('[data-ctx="settings"]')) updateSettingsHints();
+  if(field === 'id' || field === 'title') renderNav();
+}
+function syncTaskRow(row){
+  var i = +row.getAttribute('data-task-index');
+  var quest = entityFor(row);
+  if(!quest || !quest.tasks[i]) return;
+  var t = quest.tasks[i];
+  var trig = triggerMap[t.type] || null;
+  var kind = trig ? trig.targetKind : 'ITEM';
+  var cell = row.querySelector('.field-target');
+  if(!cell) return;
+  if(kind === 'NONE'){
+    cell.innerHTML = '<span class="field-label">目标</span><p class="none-note">该触发器无需目标，数量单位为秒</p>';
+  } else {
+    cell.innerHTML = '<span class="field-label">目标 <span class="subtle mono">' + kindLabel(kind) + '</span></span>' +
+      comboHtml(t.target, registryKeyForKind(kind), {
+        scope:'tasks', index:i, field:'target', focus:'task-' + i + '-target',
+        ariaLabel:'第 ' + (i + 1) + ' 项目标' + kindLabel(kind) + ' ID',
+        placeholder: trig && trig.targetHint ? trig.targetHint : '物品 ID、#标签或 *'
+      }) +
+      '<span class="field-hint">' + esc((trig && trig.targetHint) || '支持 #标签 与 *') + '</span>';
+  }
+}
+function syncRewardRow(row){
+  var i = +row.getAttribute('data-reward-index');
+  var quest = entityFor(row);
+  if(!quest || !quest.rewards[i]) return;
+  var r = quest.rewards[i];
+  var isItem = r.type === 'item';
+  var itemCell = row.querySelector('.field-item');
+  var numInput = row.querySelector('.field-amount input');
+  var numLabel = row.querySelector('.js-num-label');
+  if(itemCell) itemCell.hidden = !isItem;
+  if(numInput){
+    numInput.setAttribute('data-field', isItem ? 'count' : 'amount');
+    numInput.value = isItem ? numAttr(r.count) : numAttr(r.amount);
+    numInput.setAttribute('data-focus', 'reward-' + i + '-amount');
+  }
+  if(numLabel) numLabel.textContent = r.type === 'coin' ? '金币数量' : r.type === 'xp' ? '经验数量' : '物品数量';
+}
+function syncHiddenTag(el){
+  var card = el.closest('.qcard');
+  if(!card) return;
+  var badges = card.querySelector('.qcard-badges');
+  var tag = badges ? badges.querySelector('[data-hidden-tag]') : null;
+  if(el.checked && !tag && badges){
+    var span = document.createElement('span');
+    span.className = 'tag hidden';
+    span.setAttribute('data-hidden-tag', '1');
+    span.textContent = '隐藏';
+    badges.appendChild(span);
+  } else if(!el.checked && tag){
+    tag.remove();
+  }
+}
+function refreshDerived(el){
+  if(el && (el.getAttribute('data-field') === 'hidden' || el.type === 'checkbox')) syncHiddenTag(el);
+  renderIssues();
+  updateSettingsHints();
+  updateDirtyChip();
+}
+
+/* ============================================================
+   可搜索下拉（物品 / 方块 / 实体）
+   ============================================================ */
+function registryList(key){
+  return key === 'blocks' ? registry.blocks : key === 'entities' ? registry.entities : registry.items;
+}
+function closeCombo(input){
+  var list = input.parentElement ? input.parentElement.querySelector('.combo-list') : null;
+  if(list) list.hidden = true;
+  input._open = false;
+  input._active = -1;
+  input.setAttribute('aria-expanded', 'false');
+  input.removeAttribute('aria-activedescendant');
+}
+function closeAllCombos(){
+  $$('.combo-input').forEach(function(input){ if(input._open) closeCombo(input); });
+}
+function renderComboList(input){
+  var box = input.parentElement;
+  var list = box ? box.querySelector('.combo-list') : null;
+  if(!list) return;
+  var all = registryList(input.getAttribute('data-registry'));
+  var term = input.value.trim().toLowerCase();
+  var exact = all.some(function(id){ return id.toLowerCase() === term; });
+  var pool;
+  if(!term || exact || input._all) pool = all;
+  else pool = all.filter(function(id){ return id.toLowerCase().indexOf(term) !== -1; });
+  var shown = pool.slice(0, COMBO_LIMIT);
+  input._pool = shown;
+  input._active = -1;
+  input.removeAttribute('aria-activedescendant');
+  if(!all.length){
+    list.innerHTML = '<li class="combo-empty" role="presentation">没有 registry 数据，可直接手动输入 ID（支持 #标签 与 *）</li>';
+    return;
+  }
+  var rows = shown.map(function(id, i){
+    return '<li role="option" id="' + input.id + '-opt-' + i + '" data-value="' + esc(id) + '" aria-selected="' + (id === input.value ? 'true' : 'false') + '">' + esc(id) + '</li>';
+  });
+  rows.push('<li class="combo-more" role="presentation">共 ' + pool.length + ' 项' + (pool.length > shown.length ? '，已显示前 ' + shown.length + ' 项，继续输入以筛选' : '') + '</li>');
+  list.innerHTML = rows.join('');
+}
+function openCombo(input, forceAll){
+  closeAllCombos();
+  input._all = !!forceAll;
+  renderComboList(input);
+  var list = input.parentElement.querySelector('.combo-list');
+  list.hidden = false;
+  input._open = true;
+  input.setAttribute('aria-expanded', 'true');
+}
+function setActiveOption(input, idx){
+  var list = input.parentElement.querySelector('.combo-list');
+  if(!list) return;
+  var opts = Array.prototype.slice.call(list.querySelectorAll('li[data-value]'));
+  if(!opts.length) return;
+  if(idx < 0) idx = 0;
+  if(idx >= opts.length) idx = opts.length - 1;
+  opts.forEach(function(li){ li.classList.remove('is-active'); });
+  opts[idx].classList.add('is-active');
+  input._active = idx;
+  input.setAttribute('aria-activedescendant', opts[idx].id);
+}
+function chooseOption(input, value){
+  if(value == null) return;
+  input.value = value;
+  input._all = false;
+  commitField(input);
+  closeCombo(input);
+  input.focus();
+}
+/* ============================================================
+   导出 JSON
+   ============================================================ */
+function questJson(q, inChapter){
+  var out = {
+    id: toStr(q.id),
+    title: toStr(q.title),
+    description: toStr(q.description),
+    icon: toStr(q.icon),
+    tasks: q.tasks.map(function(t){
+      var o = { type:toStr(t.type), target:toStr(t.target), amount:t.amount };
+      if(toStr(t.display).trim()) o.display = t.display;
+      var extras = t._extra || {};
+      Object.keys(extras).forEach(function(k){ if(!(k in o)) o[k] = extras[k]; });
+      return o;
+    }),
+    rewards: q.rewards.map(function(r){
+      var o;
+      if(r.type === 'item') o = { type:'item', item:toStr(r.item), count:r.count };
+      else if(r.type === 'coin' || r.type === 'xp') o = { type:r.type, amount:r.amount };
+      else {
+        o = { type:toStr(r.type) };
+        if(isFinite(r.amount)) o.amount = r.amount;
+        if(toStr(r.item)){ o.item = r.item; if(isFinite(r.count)) o.count = r.count; }
+      }
+      var extras = r._extra || {};
+      Object.keys(extras).forEach(function(k){ if(!(k in o)) o[k] = extras[k]; });
+      return o;
+    })
+  };
+  if(inChapter){
+    out.x = isFinite(q.x) ? q.x : 0;
+    out.y = isFinite(q.y) ? q.y : 0;
+    out.requires = (q.requires || []).slice();
+    out.hidden = !!q.hidden;
+  }
+  var qExtras = q._extra || {};
+  Object.keys(qExtras).forEach(function(k){ if(!(k in out)) out[k] = qExtras[k]; });
+  return out;
+}
+function buildExport(){
+  var settings = {
+    dailyCount: isFinite(state.settings.dailyCount) ? state.settings.dailyCount : 0,
+    weeklyCount: isFinite(state.settings.weeklyCount) ? state.settings.weeklyCount : 0,
+    timeZone: toStr(state.settings.timeZone)
+  };
+  Object.keys(state.settings._extra || {}).forEach(function(k){ if(!(k in settings)) settings[k] = state.settings._extra[k]; });
+  return {
+    settings: settings,
+    daily: state.daily.map(function(q){ return questJson(q, false); }),
+    weekly: state.weekly.map(function(q){ return questJson(q, false); }),
+    chapters: state.chapters.map(function(ch){
+      var o = {
+        id: toStr(ch.id),
+        title: toStr(ch.title),
+        description: toStr(ch.description),
+        icon: toStr(ch.icon),
+        quests: ch.quests.map(function(q){ return questJson(q, true); })
+      };
+      Object.keys(ch._extra || {}).forEach(function(k){ if(!(k in o)) o[k] = ch._extra[k]; });
+      return o;
+    })
+  };
+}
+function exportJsonText(){ return JSON.stringify(buildExport(), null, 2) + '\n'; }
+function requireValid(){
+  var issues = computeIssues();
+  state.ui.issues = issues;
+  var errors = issues.filter(function(i){ return i.level === 'error'; }).length;
+  renderIssues();
+  if(errors){
+    state.ui.issuesOpen = true;
+    applyIssuesVisibility();
+    flash('无法导出：还有 ' + errors + ' 个错误需要修复，请查看右侧校验问题面板', 'err');
+    return false;
+  }
+  return true;
+}
+function doExport(){
+  if(!requireValid()) return;
+  var issues = state.ui.issues;
+  var warns = issues.length;
+  var text = exportJsonText();
+  var name = 'quests.json';
+  try {
+    var blob = new Blob([text], { type:'application/json;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  } catch(e){
+    flash('下载失败：' + e.message + '，请改用“复制 JSON”', 'err');
+    return;
+  }
+  state.ui.lastExportAt = Date.now();
+  state.ui.dirty = false;
+  saveDraftNow();
+  updateSettingsHints();
+  updateDirtyChip();
+  flash('已导出 ' + name + (warns ? '（含 ' + warns + ' 条警告）' : '') + ' · 覆盖服务器 config/habi_train_survive/quests.json 后执行 /quest reload', 'ok');
+}
+/* 在线保存：POST 到服务器，服务端会先校验整份定义，失败时不会覆盖 quests.json。 */
+var onlineSaving = false;
+function saveToServer(){
+  if(!ONLINE){ flash('当前是离线编辑器，请使用“导出 quests.json”', 'warn'); return; }
+  if(onlineSaving) return;
+  if(!requireValid()) return;
+  var text = exportJsonText();
+  onlineSaving = true;
+  var btn = $('#btnOnlineSave');
+  if(btn) btn.disabled = true;
+  flash('正在保存到服务器…', 'info');
+  fetch(ONLINE.endpoint, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json;charset=utf-8', 'X-Quest-Token':ONLINE.token },
+    body:text
+  }).then(function(res){
+    return res.text().then(function(body){
+      var payload = null;
+      try { payload = body ? JSON.parse(body) : null; } catch(e){ payload = null; }
+      if(res.ok && payload && payload.success){
+        state.ui.dirty = false;
+        state.ui.lastExportAt = Date.now();
+        saveDraftNow();
+        updateDirtyChip();
+        flash('已保存到服务器 quests.json 并立即生效', 'ok');
+        return;
+      }
+      var reason = (payload && payload.error) ? payload.error : ('HTTP ' + res.status);
+      flash('保存失败，服务器仍使用旧定义：' + reason, 'err');
+    });
+  }).catch(function(err){
+    flash('保存失败：' + (err && err.message ? err.message : '网络错误'), 'err');
+  }).then(function(){
+    onlineSaving = false;
+    if(btn) btn.disabled = false;
+  });
+}
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.top = '-1000px';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e){ ok = false; }
+  ta.remove();
+  flash(ok ? '已复制 JSON 到剪贴板 · 保存为 quests.json 后覆盖服务器配置并执行 /quest reload' : '复制失败，请使用“导出 quests.json”下载文件', ok ? 'ok' : 'err');
+}
+function copyJson(){
+  if(!requireValid()) return;
+  var text = exportJsonText();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      flash('已复制 JSON 到剪贴板 · 保存为 quests.json 后覆盖服务器配置并执行 /quest reload', 'ok');
+    }).catch(function(){ fallbackCopy(text); });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+/* ============================================================
+   导入 / 示例数据
+   ============================================================ */
+function importFile(file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(){ importText(String(reader.result || ''), file.name || 'quests.json'); };
+  reader.onerror = function(){ flash('无法读取文件：' + (file.name || ''), 'err'); };
+  reader.readAsText(file, 'utf-8');
+}
+function summarizeData(src){
+  var d = Array.isArray(src.daily) ? src.daily.length : 0;
+  var w = Array.isArray(src.weekly) ? src.weekly.length : 0;
+  var cs = Array.isArray(src.chapters) ? src.chapters : [];
+  var qc = cs.reduce(function(a, c){ return a + (Array.isArray(c && c.quests) ? c.quests.length : 0); }, 0);
+  return '每日 ' + d + ' 条、每周 ' + w + ' 条、章节 ' + cs.length + ' 个（共 ' + qc + ' 个章节任务）';
+}
+function importText(text, name){
+  var data;
+  try { data = JSON.parse(text); } catch(err){ flash('JSON 解析失败：' + err.message, 'err'); return; }
+  var src = pickQuestSource(data);
+  if(!src){ flash('无法识别的 ' + name + '：缺少 settings / daily / weekly / chapters 字段', 'err'); return; }
+  var summary = summarizeData(src);
+  openModal({
+    title: '导入 ' + name,
+    body: '将用该文件的 ' + summary + ' 替换当前编辑内容。当前草稿会自动保存，可在设置页放弃草稿恢复。',
+    confirmLabel: '导入并替换',
+    onConfirm: function(){
+      applyQuestData(src);
+      state.ui.dirty = true;
+      state.ui.issuesOpen = true;
+      applyIssuesVisibility();
+      renderAll(true);
+      saveDraftNow();
+      updateDirtyChip();
+      flash('已导入 ' + name + '：' + summary, 'ok');
+    }
+  });
+}
+function sampleQuest(id, title, icon, tasks, rewards, extra){
+  var q = {
+    id: uniqueQuestId(id),
+    title: title,
+    description: (extra && extra.description) || '',
+    icon: icon,
+    tasks: tasks.map(normTask),
+    rewards: rewards.map(normReward),
+    x: (extra && extra.x) || 0,
+    y: (extra && extra.y) || 0,
+    requires: (extra && extra.requires) || [],
+    hidden: !!(extra && extra.hidden)
+  };
+  return normQuest(q);
+}
+function insertSamples(){
+  var emptyDaily = state.daily.length === 0;
+  var emptyWeekly = state.weekly.length === 0;
+  var emptyChapters = state.chapters.length === 0;
+  if(!emptyDaily && !emptyWeekly && !emptyChapters){
+    flash('当前已有每日、每周与章节数据，未插入示例。可先删除现有条目再插入。', 'warn');
+    return;
+  }
+  var itemLog = pickRegistryId('items', 'minecraft:oak_log');
+  var itemIron = pickRegistryId('items', 'minecraft:raw_iron');
+  var itemBread = pickRegistryId('items', 'minecraft:bread');
+  var itemApple = pickRegistryId('items', 'minecraft:golden_apple');
+  var itemTable = pickRegistryId('items', 'minecraft:crafting_table');
+  var itemOre = pickRegistryId('items', 'minecraft:iron_ore');
+  var itemWheat = pickRegistryId('items', 'minecraft:wheat');
+  var itemSword = pickRegistryId('items', 'minecraft:iron_sword');
+  var itemPick = pickRegistryId('items', 'minecraft:iron_pickaxe');
+
+  if(emptyDaily){
+    state.daily = [
+      sampleQuest('sample_daily_logs', '示例 · 采集原木', itemLog,
+        [{ type:'mine_block', target:'#minecraft:logs', amount:64, display:'挖掘任意原木 64 个' }],
+        [{ type:'coin', amount:300 }]),
+      sampleQuest('sample_daily_kill', '示例 · 清理怪物', itemSword,
+        [{ type:'kill_entity', target:'*', amount:20, display:'击杀任意生物 20 只' }],
+        [{ type:'coin', amount:400 }]),
+      sampleQuest('sample_daily_iron', '示例 · 收集铁矿', itemIron,
+        [{ type:'obtain_item', target:itemIron, amount:32, display:'获得铁矿石 32 个' }],
+        [{ type:'xp', amount:30 }]),
+      sampleQuest('sample_daily_online', '示例 · 在线时长', pickRegistryId('items', 'minecraft:clock'),
+        [{ type:'online_time', target:'', amount:1800, display:'累计在线 1800 秒' }],
+        [{ type:'coin', amount:250 }]),
+      sampleQuest('sample_daily_craft', '示例 · 烤面包', itemBread,
+        [{ type:'craft_item', target:itemBread, amount:16, display:'合成面包 16 个' }],
+        [{ type:'item', item:itemBread, count:8 }])
+    ];
+  }
+  if(emptyWeekly){
+    state.weekly = [
+      sampleQuest('sample_weekly_ore', '示例 · 矿脉探险', itemPick,
+        [{ type:'mine_block', target:itemOre, amount:128, display:'挖掘铁矿石 128 个' }],
+        [{ type:'coin', amount:1200 }, { type:'xp', amount:100 }]),
+      sampleQuest('sample_weekly_kill', '示例 · 荒野守卫', itemSword,
+        [{ type:'kill_entity', target:'*', amount:120, display:'击杀任意生物 120 只' }],
+        [{ type:'coin', amount:1500 }]),
+      sampleQuest('sample_weekly_apple', '示例 · 金苹果', itemApple,
+        [{ type:'obtain_item', target:itemApple, amount:8, display:'获得金苹果 8 个' }],
+        [{ type:'item', item:itemApple, count:2 }]),
+      sampleQuest('sample_weekly_online', '示例 · 长久陪伴', pickRegistryId('items', 'minecraft:clock'),
+        [{ type:'online_time', target:'', amount:7200, display:'累计在线 7200 秒' }],
+        [{ type:'coin', amount:900 }]),
+      sampleQuest('sample_weekly_submit', '示例 · 上交物资', itemWheat,
+        [{ type:'submit_item', target:itemWheat, amount:64, display:'提交小麦 64 个' }],
+        [{ type:'xp', amount:150 }])
+    ];
+  }
+  if(emptyChapters){
+    var q1 = sampleQuest('sample_chapter_start', '示例 · 安家落户', itemTable,
+      [{ type:'place_block', target:itemTable, amount:1, display:'放置工作台 1 个' }],
+      [{ type:'coin', amount:100 }], { x:0, y:0, description:'章节起点：先放下一个工作台。' });
+    var q2 = sampleQuest('sample_chapter_mine', '示例 · 第一桶矿', itemOre,
+      [{ type:'mine_block', target:itemOre, amount:16, display:'挖掘铁矿石 16 个' }],
+      [{ type:'item', item:itemBread, count:8 }], { x:1, y:0, requires:[q1.id], description:'完成前置后开放。' });
+    var q3 = sampleQuest('sample_chapter_farm', '示例 · 自给自足', itemWheat,
+      [{ type:'obtain_item', target:itemWheat, amount:32, display:'收获小麦 32 个' }],
+      [{ type:'xp', amount:30 }], { x:2, y:0, requires:[q2.id], description:'章节终点示例。' });
+    state.chapters = [normChapter({ id: uniqueChapterId('chapter_sample'), title:'示例章节：生存入门', description:'示例数据，可直接修改或删除。', icon: pickRegistryId('items', 'minecraft:grass_block'), quests:[q1, q2, q3] })];
+  }
+  // 空模板插入示例后，刷新数量必须落在有效区间，否则会出现校验错误
+  if(!isFinite(state.settings.dailyCount) || state.settings.dailyCount <= 0 || state.settings.dailyCount > state.daily.length){
+    state.settings.dailyCount = Math.min(5, state.daily.length);
+  }
+  if(!isFinite(state.settings.weeklyCount) || state.settings.weeklyCount <= 0 || state.settings.weeklyCount > state.weekly.length){
+    state.settings.weeklyCount = Math.min(5, state.weekly.length);
+  }
+  state.ui.sel = { kind:'settings' };
+  state.ui.dirty = true;
+  renderAll(true);
+  saveDraftNow();
+  flash('已插入示例数据：每日 ' + state.daily.length + ' / 每周 ' + state.weekly.length + ' / 章节 ' + state.chapters.length + '（示例数据可自由修改或删除）', 'ok');
+}
+
+/* ============================================================
+   模态框
+   ============================================================ */
+var modalPrevFocus = null;
+function openModal(opts){
+  closeModal(true);
+  modalPrevFocus = document.activeElement;
+  var danger = !!opts.danger;
+  modalRoot.innerHTML = '<div class="modal-backdrop" data-modal-backdrop>' +
+    '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">' +
+      '<div class="modal-head"><h2 id="modalTitle">' + esc(opts.title || '确认') + '</h2></div>' +
+      '<div class="modal-body">' + (opts.bodyHtml || esc(opts.body || '')) + '</div>' +
+      '<div class="modal-foot">' +
+        '<button class="btn sm" type="button" data-modal-cancel>' + esc(opts.cancelLabel || '取消') + '</button>' +
+        '<button class="btn sm ' + (danger ? 'danger' : 'primary') + '" type="button" data-modal-confirm>' + esc(opts.confirmLabel || '确定') + '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  var backdrop = modalRoot.querySelector('.modal-backdrop');
+  var cancel = modalRoot.querySelector('[data-modal-cancel]');
+  var confirm = modalRoot.querySelector('[data-modal-confirm]');
+  cancel.addEventListener('click', function(){ closeModal(); });
+  confirm.addEventListener('click', function(){
+    var fn = opts.onConfirm;
+    closeModal(true);
+    if(fn) fn();
+  });
+  backdrop.addEventListener('mousedown', function(e){ if(e.target === backdrop) closeModal(); });
+  requestAnimationFrame(function(){ confirm.focus(); });
+}
+function closeModal(keepFocus){
+  if(!modalRoot.innerHTML) return;
+  modalRoot.innerHTML = '';
+  if(!keepFocus && modalPrevFocus && document.contains(modalPrevFocus)){
+    try { modalPrevFocus.focus(); } catch(e){}
+  }
+  modalPrevFocus = null;
+}
+function trapModalFocus(e){
+  var modal = modalRoot.querySelector('.modal');
+  if(!modal) return;
+  var focusables = $$('button, [href], input, select, textarea', modal).filter(function(el){ return !el.disabled; });
+  if(!focusables.length) return;
+  var first = focusables[0], last = focusables[focusables.length - 1];
+  if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+}
+function confirmDanger(title, body, onConfirm, label){
+  openModal({ title:title, body:body, confirmLabel:label || '删除', danger:true, onConfirm:onConfirm });
+}
+
+/* ============================================================
+   草稿恢复 / 清理
+   ============================================================ */
+function discardDraft(){
+  confirmDanger('放弃本地草稿？', '将删除浏览器中保存的草稿，并重新载入当前页面的服务器注入数据。此操作无法撤销。', function(){
+    try { localStorage.removeItem(DRAFT_KEY); } catch(e){}
+    state.ui.draftAt = null;
+    state.ui.draftRestored = false;
+    state.ui.dirty = false;
+    applyQuestData(pickQuestSource(BUNDLE) || {});
+    state.ui.noticeDismissed = true;
+    hideNotice();
+    renderAll(true);
+    updateDirtyChip();
+    flash(BUNDLE ? '已放弃本地草稿，重新载入服务器数据' : '已清空本地草稿，重新开始空配置', 'ok');
+  }, '放弃草稿并重载');
+}
+function clearDraft(){
+  confirmDanger('删除本地草稿？', '仅删除浏览器中保存的草稿，当前页面内容保持不变。', function(){
+    try { localStorage.removeItem(DRAFT_KEY); } catch(e){}
+    state.ui.draftAt = null;
+    updateDirtyChip();
+    updateSettingsHints();
+    flash('已删除本地草稿', 'ok');
+  }, '删除草稿');
+}
+
+/* ============================================================
+   任务 / 章节操作
+   ============================================================ */
+function currentQuest(){
+  var sel = state.ui.sel;
+  if(sel.kind === 'daily' || sel.kind === 'weekly') return state[sel.kind][sel.index] || null;
+  if(sel.kind === 'cq'){
+    var ch = state.chapters[sel.chapter];
+    return ch ? ch.quests[sel.index] || null : null;
+  }
+  return null;
+}
+function confirmDeleteQuest(kind, index, chapterIndex){
+  var arr = chapterIndex == null ? state[kind] : state.chapters[chapterIndex].quests;
+  var q = arr[index];
+  if(!q) return;
+  confirmDanger('删除任务', '确定删除“' + (q.title || q.id || '未命名任务') + '”？其他任务对它的前置依赖会被清理。', function(){
+    deleteQuest(arr, index, kind, chapterIndex);
+  });
+}
+function addTask(){
+  var q = currentQuest();
+  if(!q) return;
+  q.tasks.push(makeTask('mine_block'));
+  markDirty();
+  saveDraftNow();
+  renderNav(); renderMain(); renderMeta(); renderIssues();
+  flash('已添加任务目标', 'ok');
+  focusField('task-' + (q.tasks.length - 1) + '-type');
+}
+function addReward(){
+  var q = currentQuest();
+  if(!q) return;
+  q.rewards.push(normReward({ type:'coin', amount:100, item:'', count:1 }));
+  markDirty();
+  saveDraftNow();
+  renderNav(); renderMain(); renderMeta(); renderIssues();
+  flash('已添加奖励', 'ok');
+  focusField('reward-' + (q.rewards.length - 1) + '-type');
+}
+function removeTask(i){
+  var q = currentQuest();
+  if(!q || !q.tasks[i]) return;
+  q.tasks.splice(i, 1);
+  markDirty();
+  saveDraftNow();
+  renderNav(); renderMain(); renderMeta(); renderIssues();
+  flash('已删除任务目标', 'ok');
+}
+function removeReward(i){
+  var q = currentQuest();
+  if(!q || !q.rewards[i]) return;
+  q.rewards.splice(i, 1);
+  markDirty();
+  saveDraftNow();
+  renderNav(); renderMain(); renderMeta(); renderIssues();
+  flash('已删除奖励', 'ok');
+}
+function reqChipsHtml(q){
+  var all = {};
+  allQuestLocations().forEach(function(e){ all[toStr(e.q.id)] = { q:e.q }; });
+  if(!q.requires.length) return '<span class="hint">尚未设置前置依赖</span>';
+  return q.requires.map(function(id){
+    var known = all[id];
+    var title = known ? (known.q.title || '未命名任务') : '不存在';
+    return '<span class="req-chip' + (known ? '' : ' unknown') + '">' +
+      '<span>' + esc(title) + '</span><code>' + esc(id) + '</code>' +
+      '<button type="button" data-remove-require="' + esc(id) + '" aria-label="移除前置依赖 ' + esc(id) + '">' + ICONS.x + '</button>' +
+    '</span>';
+  }).join('');
+}
+function refreshReqChips(){
+  var q = currentQuest(), box = $('#reqChips');
+  if(!q || !box) return;
+  box.innerHTML = reqChipsHtml(q);
+}
+function refreshReqDisabled(){
+  var q = currentQuest();
+  if(!q) return;
+  $$('.req-opt input[data-req-id]').forEach(function(cb){
+    var id = cb.getAttribute('data-req-id');
+    var label = cb.closest('.req-opt');
+    if(cb.checked){
+      cb.disabled = false;
+      if(label) label.classList.remove('is-cycle');
+      cb.removeAttribute('title');
+      return;
+    }
+    var cycle = wouldCycle(id, q.id);
+    cb.disabled = cycle;
+    if(label) label.classList.toggle('is-cycle', cycle);
+    if(cycle) cb.setAttribute('title', '会与当前任务形成循环依赖');
+    else cb.removeAttribute('title');
+  });
+}
+function toggleRequire(cb){
+  var q = currentQuest();
+  if(!q) return;
+  var id = cb.getAttribute('data-req-id');
+  if(!id) return;
+  if(cb.checked) uniquePush(q.requires, id);
+  else q.requires = q.requires.filter(function(r){ return r !== id; });
+  markDirty();
+  scheduleDraft();
+  refreshReqChips();
+  refreshReqDisabled();
+  renderIssues();
+}
+function filterRequires(term){
+  term = toStr(term).trim().toLowerCase();
+  $$('.req-opt').forEach(function(opt){
+    var text = opt.getAttribute('data-req-text') || '';
+    opt.classList.toggle('is-hidden', !!term && text.indexOf(term) === -1);
+  });
+}
+function syncCardPositions(){
+  var sel = state.ui.sel;
+  if(sel.kind !== 'chapter') return;
+  var ch = state.chapters[sel.index];
+  if(!ch) return;
+  ch.quests.forEach(function(q, i){
+    var card = mainEl.querySelector('.qcard[data-ctx="cq:' + sel.index + ':' + i + '"]');
+    if(!card) return;
+    var x = card.querySelector('[data-field="x"]'), y = card.querySelector('[data-field="y"]');
+    if(x && document.activeElement !== x) x.value = numAttr(q.x);
+    if(y && document.activeElement !== y) y.value = numAttr(q.y);
+  });
+}
+function renderChapterGrid(){
+  var sel = state.ui.sel;
+  if(sel.kind !== 'chapter') return;
+  var wrap = $('#posGridWrap'), ch = state.chapters[sel.index];
+  if(!wrap || !ch) return;
+  wrap.innerHTML = gridHtml(ch, sel.index);
+}
+function setQuestPosition(index, x, y){
+  var sel = state.ui.sel;
+  if(sel.kind !== 'chapter') return;
+  var ch = state.chapters[sel.index];
+  if(!ch || !ch.quests[index]) return;
+  ch.quests[index].x = x;
+  ch.quests[index].y = y;
+  state.ui.gridPick = null;
+  markDirty();
+  saveDraftNow();
+  syncCardPositions();
+  renderChapterGrid();
+  renderIssues();
+  flash('已移动任务到网格 (' + x + ', ' + y + ')', 'ok');
+}
+function moveChapterQuest(delta, qi){
+  var sel = state.ui.sel;
+  if(sel.kind !== 'chapter') return;
+  moveQuest('cq', qi, delta, sel.index);
+}
+function editChapterQuest(qi){
+  var sel = state.ui.sel;
+  if(sel.kind !== 'chapter') return;
+  state.ui.sel = { kind:'cq', chapter:sel.index, index:qi };
+  renderNav(); renderMain(true); renderMeta(); renderIssues();
+  if(window.innerWidth <= 1024) setNav(false);
+}
+function pickChapterQuestIndex(el){
+  var card = el.closest('.qcard');
+  if(!card) return -1;
+  var parts = toStr(card.getAttribute('data-ctx')).split(':');
+  return parts[0] === 'cq' ? +parts[2] : -1;
+}
+function selectByKey(key){
+  if(key === 'settings') state.ui.sel = { kind:'settings' };
+  else if(key === 'chapters') state.ui.sel = { kind:'chapters' };
+  else {
+    var p = String(key).split(':');
+    var i = +p[1];
+    if(p[0] === 'chapter') state.ui.sel = { kind:'chapter', index:i };
+    else state.ui.sel = { kind:p[0], index:i };
+  }
+  state.ui.confirmDelete = null;
+  renderNav();
+  renderMain(true);
+  renderMeta();
+  renderIssues();
+  if(window.innerWidth <= 1024) setNav(false);
+}
+function setNav(open){
+  state.ui.navOpen = !!open;
+  document.body.classList.toggle('nav-open', state.ui.navOpen);
+  var btn = $('#navToggle');
+  if(btn) btn.setAttribute('aria-expanded', state.ui.navOpen ? 'true' : 'false');
+}
+function applyIssuesVisibility(){
+  document.body.classList.toggle('issues-closed', !state.ui.issuesOpen);
+  var btn = $('#issuesToggle');
+  if(btn) btn.setAttribute('aria-expanded', state.ui.issuesOpen ? 'true' : 'false');
+}
+
+/* ============================================================
+   事件绑定
+   ============================================================ */
+function handleAction(action, el){
+  switch(action){
+    case 'import': fileInput.click(); break;
+    case 'export': doExport(); break;
+    case 'online-save': saveToServer(); break;
+    case 'copy': copyJson(); break;
+    case 'sample': insertSamples(); break;
+    case 'save-draft':
+      if(saveDraftNow()) flash('草稿已保存（' + fmtClock(state.ui.draftAt) + '）', 'ok');
+      updateSettingsHints();
+      break;
+    case 'discard-draft': discardDraft(); break;
+    case 'clear-draft': clearDraft(); break;
+    case 'dismiss-notice': hideNotice(); break;
+    case 'add-task': addTask(); break;
+    case 'add-reward': addReward(); break;
+    case 'add-chapter': addNew('chapter'); break;
+    case 'add-chapter-quest':
+      if(state.ui.sel.kind === 'chapter') addChapterQuest(state.ui.sel.index);
+      else if(state.ui.sel.kind === 'cq') addChapterQuest(state.ui.sel.chapter);
+      break;
+    case 'back-chapter':
+      if(state.ui.sel.kind === 'cq'){
+        state.ui.sel = { kind:'chapter', index:state.ui.sel.chapter };
+        renderAll(true);
+        if(window.innerWidth <= 1024) setNav(false);
+      }
+      break;
+    case 'dup-quest':
+      if(state.ui.sel.kind === 'daily') duplicateQuest(state.daily, state.ui.sel.index);
+      else if(state.ui.sel.kind === 'weekly') duplicateQuest(state.weekly, state.ui.sel.index);
+      else if(state.ui.sel.kind === 'cq') duplicateQuest(state.chapters[state.ui.sel.chapter].quests, state.ui.sel.index, state.ui.sel.chapter);
+      break;
+    case 'del-quest':
+      if(state.ui.sel.kind === 'daily') confirmDeleteQuest('daily', state.ui.sel.index);
+      else if(state.ui.sel.kind === 'weekly') confirmDeleteQuest('weekly', state.ui.sel.index);
+      else if(state.ui.sel.kind === 'cq') confirmDeleteQuest('cq', state.ui.sel.index, state.ui.sel.chapter);
+      break;
+    case 'edit-cq': editChapterQuest(pickChapterQuestIndex(el)); break;
+  }
+}
+function bindEvents(){
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+
+    if(t.closest('#backdrop')){ setNav(false); return; }
+
+    var toggle = t.closest('.combo-toggle');
+    if(toggle){
+      e.preventDefault();
+      var input = toggle.parentElement.querySelector('.combo-input');
+      if(input){ openCombo(input, true); input.focus(); }
+      return;
+    }
+
+    var selectEl = t.closest('[data-select]');
+    if(selectEl){ selectByKey(selectEl.getAttribute('data-select')); return; }
+
+    var addEl = t.closest('[data-add]');
+    if(addEl){ addNew(addEl.getAttribute('data-add')); return; }
+
+    if(t.closest('[data-sample]')){ insertSamples(); return; }
+
+    var moveEl = t.closest('[data-move]');
+    if(moveEl){
+      var kind = moveEl.getAttribute('data-kind');
+      var idx = +moveEl.getAttribute('data-index');
+      var delta = moveEl.getAttribute('data-move') === 'up' ? -1 : 1;
+      if(kind === 'chapter') moveChapter(idx, delta);
+      else moveQuest(kind, idx, delta);
+      return;
+    }
+    var dupEl = t.closest('[data-dup]');
+    if(dupEl){
+      var p = dupEl.getAttribute('data-dup').split(':');
+      var i = +p[1];
+      if(p[0] === 'daily') duplicateQuest(state.daily, i);
+      else if(p[0] === 'weekly') duplicateQuest(state.weekly, i);
+      else if(p[0] === 'chapter') duplicateChapter(i);
+      return;
+    }
+    var delEl = t.closest('[data-del]');
+    if(delEl){
+      state.ui.confirmDelete = delEl.getAttribute('data-del');
+      renderNav();
+      return;
+    }
+    var confirmDel = t.closest('[data-confirm-delete]');
+    if(confirmDel){
+      var parts = confirmDel.getAttribute('data-confirm-delete').split(':');
+      state.ui.confirmDelete = null;
+      var ci = +parts[1];
+      if(parts[0] === 'daily' || parts[0] === 'weekly') deleteQuest(state[parts[0]], ci, parts[0]);
+      else if(parts[0] === 'chapter') deleteChapterNow(ci);
+      return;
+    }
+    if(t.closest('[data-cancel-delete]')){ state.ui.confirmDelete = null; renderNav(); return; }
+
+    var chMove = t.closest('[data-ch-move]');
+    if(chMove){ moveChapter(+chMove.getAttribute('data-index'), chMove.getAttribute('data-ch-move') === 'up' ? -1 : 1); return; }
+    var chDup = t.closest('[data-ch-dup]');
+    if(chDup){ duplicateChapter(+chDup.getAttribute('data-ch-dup')); return; }
+    var chDel = t.closest('[data-ch-del]');
+    if(chDel){ confirmDeleteChapter(+chDel.getAttribute('data-ch-del')); return; }
+    var editCh = t.closest('[data-edit-chapter]');
+    if(editCh){ state.ui.sel = { kind:'chapter', index:+editCh.getAttribute('data-edit-chapter') }; renderAll(true); return; }
+
+    var cqMove = t.closest('[data-cq-move]');
+    if(cqMove){ moveChapterQuest(cqMove.getAttribute('data-cq-move') === 'up' ? -1 : 1, +cqMove.getAttribute('data-index')); return; }
+    var cqDup = t.closest('[data-cq-dup]');
+    if(cqDup){
+      var qi = +cqDup.getAttribute('data-cq-dup');
+      var sel = state.ui.sel;
+      if(sel.kind === 'chapter'){ duplicateQuest(state.chapters[sel.index].quests, qi, sel.index); }
+      return;
+    }
+    var cqDel = t.closest('[data-cq-del]');
+    if(cqDel){
+      var qdi = +cqDel.getAttribute('data-cq-del');
+      var s2 = state.ui.sel;
+      if(s2.kind === 'chapter') confirmDeleteQuest('cq', qdi, s2.index);
+      return;
+    }
+    var editCq = t.closest('[data-action="edit-cq"]');
+    if(editCq){ editChapterQuest(pickChapterQuestIndex(editCq)); return; }
+
+    var rmTask = t.closest('[data-remove-task]');
+    if(rmTask){ removeTask(+rmTask.getAttribute('data-remove-task')); return; }
+    var rmReward = t.closest('[data-remove-reward]');
+    if(rmReward){ removeReward(+rmReward.getAttribute('data-remove-reward')); return; }
+    var rmReq = t.closest('[data-remove-require]');
+    if(rmReq){
+      var q = currentQuest();
+      if(q){
+        var rid = rmReq.getAttribute('data-remove-require');
+        q.requires = q.requires.filter(function(r){ return r !== rid; });
+        markDirty();
+        saveDraftNow();
+        refreshReqChips();
+        refreshReqDisabled();
+        renderIssues();
+        flash('已移除前置依赖 ' + rid, 'ok');
+      }
+      return;
+    }
+
+    var actionEl = t.closest('[data-action]');
+    if(actionEl){ handleAction(actionEl.getAttribute('data-action'), actionEl); return; }
+
+    var issueEl = t.closest('[data-issue]');
+    if(issueEl){ gotoIssue(+issueEl.getAttribute('data-issue')); return; }
+
+    var chip = t.closest('.gchip');
+    if(chip){
+      state.ui.gridPick = +chip.getAttribute('data-gchip');
+      renderChapterGrid();
+      flash('已选中任务，点击网格中的空格完成放置', 'info');
+      return;
+    }
+    var cell = t.closest('.gcell');
+    if(cell && state.ui.sel.kind === 'chapter' && state.ui.gridPick != null){
+      var xy = cell.getAttribute('data-cell').split(',');
+      setQuestPosition(state.ui.gridPick, +xy[0], +xy[1]);
+      return;
+    }
+
+    // 点击组合框输入框时展开列表
+    if(t.closest('.combo-input') && !t.closest('.combo-input')._open){
+      openCombo(t.closest('.combo-input'), false);
+    }
+  });
+
+  document.addEventListener('input', function(e){
+    var el = e.target;
+    if(!el || !el.matches) return;
+    if(el === searchInput){ state.ui.search = el.value; renderNav(); return; }
+    if(el.matches('.combo-input')){
+      if(el._open){ el._all = false; renderComboList(el); }
+      commitField(el);
+      return;
+    }
+    if(el.matches('[data-req-filter]')){ filterRequires(el.value); return; }
+    if(el.matches('[data-field]')) commitField(el);
+  });
+
+  document.addEventListener('change', function(e){
+    var el = e.target;
+    if(!el || !el.matches) return;
+    if(el.matches('[data-req-id]')){ toggleRequire(el); return; }
+    if(!el.matches('[data-field]')) return;
+    commitField(el);
+    var field = el.getAttribute('data-field');
+    if(field === 'type'){
+      var taskRow = el.closest('.task-row');
+      if(taskRow) syncTaskRow(taskRow);
+      var rewardRow = el.closest('.reward-row');
+      if(rewardRow) syncRewardRow(rewardRow);
+    }
+    if(field === 'hidden') syncHiddenTag(el);
+    if(field === 'x' || field === 'y'){
+      var card = el.closest('.qcard');
+      if(card && state.ui.sel.kind === 'chapter'){
+        syncCardPositions();
+        renderChapterGrid();
+      } else if(state.ui.sel.kind === 'cq'){
+        renderNav();
+      }
+    }
+  });
+
+  document.addEventListener('mousedown', function(e){
+    var opt = e.target.closest('.combo-list li[data-value]');
+    if(opt){
+      e.preventDefault();
+      var input = opt.closest('.combo').querySelector('.combo-input');
+      chooseOption(input, opt.getAttribute('data-value'));
+      return;
+    }
+    if(!e.target.closest('.combo')) closeAllCombos();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      if(modalRoot.querySelector('.modal')){
+        closeModal();
+        return;
+      }
+      if(document.body.classList.contains('nav-open')){ setNav(false); return; }
+      if(document.querySelector('.combo-input[aria-expanded="true"]')){ closeAllCombos(); return; }
+    }
+    var input = e.target.closest ? e.target.closest('.combo-input') : null;
+    if(input){
+      var list = input.parentElement.querySelector('.combo-list');
+      if(!input._open){
+        if(e.key === 'ArrowDown' || e.key === 'Enter'){ e.preventDefault(); openCombo(input, false); }
+        return;
+      }
+      var options = Array.prototype.slice.call(list.querySelectorAll('li[data-value]'));
+      var idx = input._active == null ? -1 : input._active;
+      if(e.key === 'ArrowDown'){ e.preventDefault(); setActiveOption(input, idx + 1); }
+      else if(e.key === 'ArrowUp'){ e.preventDefault(); setActiveOption(input, idx - 1); }
+      else if(e.key === 'Enter'){
+        if(idx >= 0 && options[idx]){ e.preventDefault(); chooseOption(input, options[idx].getAttribute('data-value')); }
+      } else if(e.key === 'Tab'){ closeCombo(input); }
+      return;
+    }
+    if(e.key === 'Tab') trapModalFocus(e);
+  });
+
+  document.addEventListener('dragstart', function(e){
+    var chip = e.target.closest ? e.target.closest('.gchip') : null;
+    if(!chip) return;
+    state.ui.dragQuest = +chip.getAttribute('data-gchip');
+    try {
+      e.dataTransfer.setData('text/plain', String(state.ui.dragQuest));
+      e.dataTransfer.effectAllowed = 'move';
+    } catch(err){}
+  });
+  document.addEventListener('dragover', function(e){
+    var cell = e.target.closest ? e.target.closest('.gcell') : null;
+    if(cell && state.ui.dragQuest != null){
+      e.preventDefault();
+      try { e.dataTransfer.dropEffect = 'move'; } catch(err){}
+      $$('.gcell.is-over').forEach(function(c){ c.classList.remove('is-over'); });
+      cell.classList.add('is-over');
+      return;
+    }
+    if(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1){
+      e.preventDefault();
+      dropOverlay.hidden = false;
+    }
+  });
+  document.addEventListener('dragleave', function(e){
+    var cell = e.target.closest ? e.target.closest('.gcell') : null;
+    if(cell) cell.classList.remove('is-over');
+  });
+  document.addEventListener('dragend', function(){
+    state.ui.dragQuest = null;
+    $$('.gcell.is-over').forEach(function(c){ c.classList.remove('is-over'); });
+    dropOverlay.hidden = true;
+  });
+  document.addEventListener('drop', function(e){
+    var cell = e.target.closest ? e.target.closest('.gcell') : null;
+    if(cell && state.ui.dragQuest != null){
+      e.preventDefault();
+      var idx = state.ui.dragQuest;
+      state.ui.dragQuest = null;
+      var xy = cell.getAttribute('data-cell').split(',');
+      $$('.gcell.is-over').forEach(function(c){ c.classList.remove('is-over'); });
+      setQuestPosition(idx, +xy[0], +xy[1]);
+      return;
+    }
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if(files && files.length){
+      e.preventDefault();
+      dropOverlay.hidden = true;
+      importFile(files[0]);
+    }
+    state.ui.dragQuest = null;
+  });
+  document.addEventListener('dragenter', function(e){
+    if(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1){
+      dropOverlay.hidden = false;
+    }
+  });
+
+  fileInput.addEventListener('change', function(){
+    var file = fileInput.files && fileInput.files[0];
+    if(file) importFile(file);
+    fileInput.value = '';
+  });
+
+  $('#navToggle').addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  $('#issuesToggle').addEventListener('click', function(){
+    state.ui.issuesOpen = !state.ui.issuesOpen;
+    applyIssuesVisibility();
+  });
+
+  window.addEventListener('beforeunload', function(e){
+    if(!state.ui.dirty) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+}
+function deleteChapterNow(ci){
+  var ch = state.chapters[ci];
+  if(!ch) return;
+  var title = ch.title || ch.id || '未命名章节';
+  var ids = ch.quests.map(function(q){ return q.id; }).filter(Boolean);
+  state.chapters.splice(ci, 1);
+  var cleaned = ids.length ? cleanupRequires(ids) : 0;
+  if(state.ui.sel.kind === 'chapter' || state.ui.sel.kind === 'cq'){
+    if(state.ui.sel.kind === 'cq' && state.ui.sel.chapter !== ci) { /* 保持 */ }
+    else state.ui.sel = state.chapters.length ? { kind:'chapter', index:Math.min(ci, state.chapters.length - 1) } : { kind:'chapters' };
+  }
+  state.ui.dirty = true;
+  renderAll(true);
+  saveDraftNow();
+  flash('已删除章节“' + title + '”' + (cleaned ? '，并清理 ' + cleaned + ' 处前置依赖' : ''), 'ok');
+}
+function confirmDeleteChapter(ci){
+  var ch = state.chapters[ci];
+  if(!ch) return;
+  confirmDanger('删除章节', '确定删除章节“' + (ch.title || ch.id || '未命名章节') + '”及其 ' + ch.quests.length + ' 个任务？相关前置依赖会被清理。', function(){
+    deleteChapterNow(ci);
+  });
+}
+
+/* ============================================================
+   启动
+   ============================================================ */
+function boot(){
+  initIcons();
+  var onlineBtn = $('#btnOnlineSave');
+  if(onlineBtn && ONLINE) onlineBtn.hidden = false;
+  var stored = ONLINE ? null : readDraft();
+  if(stored && stored.data){
+    applyQuestData(stored.data);
+    state.ui.draftAt = stored.savedAt || null;
+    state.ui.draftRestored = true;
+    state.ui.dirty = true;
+  } else {
+    applyQuestData(pickQuestSource(BUNDLE) || {});
+  }
+  bindEvents();
+  applyIssuesVisibility();
+  renderAll();
+  updateDirtyChip();
+  if(state.ui.draftRestored){
+    showNotice('已恢复本地草稿（' + (state.ui.draftAt ? fmtClock(state.ui.draftAt) : '时间未知') + '），它可能与服务器注入的数据不同。');
+    flash('已恢复本地草稿；如需服务器数据，请点击“放弃本地草稿，重新载入服务器数据”。', 'warn');
+  } else if(!BUNDLE){
+    flash('未注入服务器数据（QUEST_BUNDLE 为 null）：当前为空配置，可导入 quests.json 或插入示例任务。', 'warn');
+  } else if(ONLINE){
+    flash('在线编辑：当前载入服务器最新任务（每日 ' + state.daily.length + ' / 每周 ' + state.weekly.length + ' / 章节 ' + state.chapters.length + '），点击“保存到服务器”直接写回 quests.json。', 'info');
+  } else {
+    flash('已载入服务器数据：每日 ' + state.daily.length + ' / 每周 ' + state.weekly.length + ' / 章节 ' + state.chapters.length + '。', 'info');
+  }
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+
+})();
+</script>
+</body>
+</html>

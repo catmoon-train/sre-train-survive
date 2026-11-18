@@ -1,36 +1,148 @@
-# Habi Train Survive
+# Habi Train Survive 服务端全功能插件化架构设计与使用手册 (v4.0 领地全面重制与生存闭环版)
 
-独立的 Fabric 模组基础项目，与 StarRailExpress 工作区使用相同的核心构建版本，不依赖其业务代码。
+`Habi Train Survive` (`habi_train_survive`) 是基于 **Minecraft 1.21.1 + Fabric Loader 0.19.3 + Fabric API 0.116.13 + Mojang Official Mappings (Java 21)** 构建的企业级生存服核心模组。本模组采用高内聚、低耦合的分层架构，原生集成 **16 大子系统与 8 大底层防护 Mixin**：
+1. **木锄私人领地与 54 格可视化控制面板 (`claim`)**
+2. **8 大底层物理防破坏 Mixin 与防战斗逃跑安全层 (`mixin` & `security`)**
+3. **VIP 权限组与配额系统 (`permission`)**
+4. **经济账本与官方回收/悬赏系统 (`economy` & `worth`)**
+5. **城镇、私人地块与国家同盟 (`town`)**
+6. **CMI 全能管理套件（45+ 指令） (`cmi`)**
+7. **玩家面对面双栏防骗交易 (`trade`)**
+8. **箱子商店与全服商店导购面板 (`chestshop`)**
+9. **全球拍卖行（一口价+竞拍+离线邮箱） (`auction`)**
+10. **Gift 私人礼盒、红包与可视化礼包中心 (`gift`)**
+11. **CDK 兑换码与批量卡密生成器 (`redeem`)**
+12. **保底抽奖盲盒与祈愿神殿 (`lottery`)**
+13. **官方多标签分类系统商城 (`sysshop`)**
+14. **死亡墓碑保险箱与遗物找回系统 (`grave`)**
+15. **每日悬赏任务与委托中心 (`quest`)**
+16. **称号商城与个人头衔衣橱 (`title`)**
 
-- Minecraft：1.21.1
-- 映射：Mojang 官方映射（`loom.officialMojangMappings()`），不是 Yarn
-- Fabric Loom：1.17.13
-- Fabric Loader：0.19.3
-- Fabric API：0.116.13+1.21.1
-- Java：21
-- Gradle：9.6.1（Wrapper 使用与现有工作区相同的腾讯云镜像）
-- Mod ID：`habi_train_survive`
-- Java 包名：`io.wifi.habitrainsurvive`
+## 最新增补：可编辑管理 GUI、动态经济与地皮
 
-## 开发
+新增统一管理入口 `/habi`：动态系统商城、箱子/电子店铺、公共地标、地皮，以及经济、领地、世界、称号和权限组配额编辑。玩家从 `/menu` 进入多人商铺、我的箱子商店与地皮大厅。
 
-使用 JDK 21，在 IntelliJ IDEA 中打开此目录并导入 Gradle 项目。
+系统商城默认每净交易64件约变化1%，价格为基准的50%～200%，供需压力6小时减半；管理员可编辑绝对上下限和百分比。电子店铺5000开店，五级商品位/虚拟库存容量逐级增长；独立64×64地皮世界首块免费，后续默认每块10000。完整参数、命令、权限、升级与备份说明见 **[动态经济与地皮手册](docs/ECONOMY_PLOTS.md)**。替换JAR后需要完整重启，客户端无需模组。
 
-```bat
-gradlew.bat build
-gradlew.bat runClient
-gradlew.bat runServer
-gradlew.bat genSources
-```
+商城新增入口：`/shop admin` 可直接新建中文分类、从主手/背包选样品并填写买卖价后上架；`/shop add` 打开新增向导，`/shop addcategory 中文名称` 直接建分类。商城管理支持OP2、`habi.admin`或`habi.shop.admin`；输入后点击中间绿色按钮确认，零经验也可使用。
 
-Git Bash/Linux 使用 `./gradlew` 替代 `gradlew.bat`。
-首次启动服务端时需要自行阅读并同意 Minecraft EULA。
+系统商城商品和抽奖奖池现在都可设置经验价：管理员在商品管理页或 `/lottery admin` 里选择“按等级”或“按具体经验点”，玩家购买/抽奖时可自行选择金币或经验支付。金币价可同时保留；经验购买不改变金币供需价格，十连经验抽奖同样九折，失败不扣经验。
 
-构建产物：`build/libs/habi-train-survive-1.0.0.jar`。
-源码包：`build/libs/habi-train-survive-1.0.0-sources.jar`。
+`/habi help` 可查看本模组全部指令、功能和真实权限，支持分类、每页6项、可点击上下页与Tab补全；`/habi help categories` 查看分类，`/habi help 商城 2` 查看分类第2页。所有玩家都能查看，管理命令仍受原权限限制，详见 **[指令帮助手册](docs/COMMAND_HELP.md)**。
 
-公共入口：`src/main/java/io/wifi/habitrainsurvive/HabiTrainSurvive.java`。
-客户端入口：`src/main/java/io/wifi/habitrainsurvive/client/HabiTrainSurviveClient.java`。
-Mixin 配置已预留，暂未包含注入。
+`/shop admin` 还支持分类/单品动态开关与购买限额：个人、全服共享两套限制，同时检查分类合计和单品额度；可设置单次、日、周、月及累计限额，0不限。默认北京时间每日0点、每周一0点刷新，统计重启保留，卖回不返还额度，玩家交易页可看剩余数量。
 
-版本与发布坐标在 `gradle.properties` 中配置。许可证暂为保留所有权利，发布前按实际授权修改 `fabric.mod.json`。
+菜单现支持游戏内自定义编辑：`/menu edit` 新建/复制菜单，编辑1～6行布局、图标数量、名称/说明、权限及多动作，安全预览后保存立即生效；玩家使用 `/menus` 或 `/menu open <ID>`。包含草稿、保存冲突保护和长文本私密输入，详见 **[自定义菜单手册](docs/CUSTOM_MENUS.md)**。
+
+家上限支持永久购买：`/homes buy`、`/buyhome` 或“我的家”菜单购买，每次上限+1，价格依次100、500、900、1300……（每次+400）。购买次数按玩家UUID保存，额度与原基础/权限组配额叠加，删除家不会重置价格；购买前有费用确认，余额不足与旧报价不扣费。
+
+## 1. 木锄私人领地系统深度重制详解 (`io.wifi.habitrainsurvive.claim`)
+
+### 1.1 木锄头选区工具 (`minecraft:wooden_hoe`)
+- **获取方式**: 自己合成任意木锄头，或输入 `/claim wand` 免费领取带说明的专属【领地选区木锄】。
+- **操作方式**:
+  - **手持木锄左键点击方块**: 设置领地对角点 #1。
+  - **手持木锄右键点击方块**: 设置领地对角点 #2，并在聊天栏实时计算**平面面积、预计圈地费用**，同时手持木锄期间会自动在选区四周生成**实时粒子光幕预览边框**。
+  - **手持木锄潜行 (Shift) + 右键**: 直接呼出当前脚下领地的 **54 格可视化领地控制面板 GUI**（若在荒野则打开领地管理总控大厅）。
+
+### 1.2 54 格可视化领地控制面板 (`ClaimControlPanelGui` - `/claim` 或 `/claim gui`)
+- **领地总控大厅**: 集中展示您拥有的领地、受邀加入的领地、一键领取木锄按钮、定位当前脚下领地按钮以及**全服在售二手领地交易市场**。
+- **单领地控制中心**:
+  - **⚙ 18 项安全防护与权限开关矩阵**: 点击图标即可实时切换每一项领地保护规则（绿色开启 / 红色严禁保护）：
+    1. `BLOCK_BREAK` (方块破坏保护)
+    2. `BLOCK_PLACE` (方块放置与点火保护)
+    3. `INTERACT` (门/按钮/拉杆/红石交互保护)
+    4. `CONTAINER` (箱子/木桶/熔炉/潜影盒打开保护)
+    5. `WORKSTATION` (工作台/铁砧/附魔台/床使用权限)
+    6. `PVP` (领地内玩家对战开关)
+    7. `EXPLOSION` (苦力怕/TNT/凋灵爆炸保护，由 `ExplosionMixin` 底层拦截)
+    8. `FIRE_SPREAD` (火焰蔓延与烧毁保护，由 `FireBlockMixin` 底层熄灭)
+    9. `PISTON` (防止领地外活塞推拉领地内方块，由 `PistonBaseBlockMixin` 底层拦截)
+    10. `FLUID_FLOW` (防止领地外岩浆/水流入领地，由 `FlowingFluidMixin` 底层拦截)
+    11. `MOB_DAMAGE` (禁止访客攻击领地内动物/村民)
+    12. `MOB_GRIEF` (防怪物破坏)
+    13. `CROP_TRAMPLE` (防踩踏农田退化，由 `FarmBlockMixin` 底层拦截)
+    14. `ITEM_PICKUP` (禁止非成员偷捡领地内地面掉落物，由 `ItemEntityMixin` 底层拦截)
+    15. `ENDER_PEARL` (禁止非成员使用末影珍珠/紫颂果穿墙潜入)
+    16. `FLY` (允许领地信任成员在领地范围内开启飞行，离开领地自动关闭)
+    17. `ENTER` (领地门禁：是否允许非成员进入领地)
+    18. `TELEPORT` (是否允许其他玩家通过 `/claim tp` 传送参观)
+  - **👥 成员管理与在线邀请面板**:
+    - 查看所有领地成员头像，**左键点击成员头像**可循环调整其权限等级（`ACCESS_TRUST` -> `CONTAINER_TRUST` -> `TRUSTED` -> `ADMIN` -> `BANNED`），**右键点击**直接移除成员。
+    - 点击底部的 **【➕ 从在线玩家列表发送领地邀请】** 可直接浏览全服在线玩家头像，一键发送可点击接受的领地邀请函！
+  - **📐 快捷扩建与子领地划分**:
+    - 面板内一键向四周扩建 +5 格或 +10 格、一键更新传送点、开启 15 秒边界粒子墙，以及支持在父领地内划分独立权限的**子领地 (`/claim subcreate <父领地> <子领地>`)** 与 **领地挂牌转让 (`/claim forsale <名称> <价格>`)**。
+
+### 1.3 领地系统完整指令表 (`ClaimCommands`)
+
+| 指令格式 | 权限要求 | 功能说明 |
+| :--- | :--- | :--- |
+| `/claim` 或 `/claim gui [领地名]` (别名 `/res`) | 全体玩家 | 打开 54 格可视化领地总控大厅或指定领地的控制面板 |
+| `/claim menu` | 全体玩家 | 直接打开当前脚下所在领地的可视化控制面板 |
+| `/claim wand` | 全体玩家 | 免费领取一把【领地选区木锄 (`minecraft:wooden_hoe`)】 |
+| `/claim pos1` / `/claim pos2` | 全体玩家 | 使用指令将脚下位置设为对角点 #1 或 #2（等同于木锄左/右键） |
+| `/claim create <领地名>` | 全体玩家 | 根据木锄选区创建新领地，自动开启 15 秒边界粒子预览 |
+| `/claim subcreate <父领地名> <子领地名>` | 领地管理员 | 在父领地内部根据木锄选区划分独立权限的子领地 |
+| `/claim invite <领地名> <玩家> [角色]` | 领地管理员 | 向目标玩家发送可点击的领地成员邀请函 |
+| `/claim accept <领地名>` / `/claim deny <领地名>` | 受邀玩家 | 接受或拒绝领地邀请 |
+| `/claim leave <领地名>` | 领地成员 | 主动退出某领地的成员名单 |
+| `/claim forsale <领地名> <价格>` / `/claim notforsale <领地名>` | 领主 | 将领地挂牌至全服领地市场出售，或取消出售 |
+| `/claim buy <领地名>` | 全体玩家 | 购买正在挂牌出售的领地并立即过户所有权 |
+| `/claim visualize [领地名]` | 全体玩家 | 开启 15 秒领地四周边框粒子墙高亮 |
+| `/claim expand <领地名> <格数>` | 领地管理员 | 将领地向四周水平扩建指定格数并补交差价 |
+| `/claim tp <领地名>` / `/claim settp <领地名>` | 全体玩家 / 管理员 | 读条传送至领地，或更新领地传送点 |
+| `/claim trust <领地名> <玩家> <角色>` / `/claim untrust <领地名> <玩家>` | 领地管理员 | 直接设置或移除玩家在领地内的权限角色 |
+| `/claim flag <领地名> <标志> <true\|false>` | 领地管理员 | 通过指令切换 18 项领地防护标志之一 |
+| `/claim transfer <领地名> <新主人>` / `/claim delete <领地名>` | 领主 / OP | 无偿转让领地所有权，或删除领地退还 50% 费用 |
+| `/claim kick <领地名> <玩家>` / `/claim msg <领地名> <enter\|leave> <文本>` | 领地管理员 | 将玩家请出领地，或修改进出领地的屏幕提示语 |
+
+## 2. 新增生存核心闭环系统 (墓碑保险 / 每日任务 / 称号衣橱)
+
+### 2.1 死亡墓碑与遗物保险箱 (`GraveCommands` & `PlayerInventoryDropMixin`)
+
+通过 `PlayerInventoryDropMixin` 注入玩家死亡掉落底层逻辑，当开启自动遗物保护时，玩家死亡瞬间全身物品不会散落进岩浆或被他人偷走，而是直接打包存入专属的**死亡墓碑保险箱**：
+
+| 指令格式 | 权限要求 | 功能说明 |
+| :--- | :--- | :--- |
+| `/grave` (别名 `/graves`, `/backdeath`) | 全体玩家 | 打开 27 格死亡墓碑保险箱 GUI：左键一键提取遗物包（在死亡点 8 格内免费，远程提取收取少量跑腿费），右键读条传送回死亡坐标 |
+| `/grave toggle` | 全体玩家 | 随时开关死亡遗物自动保护功能 |
+
+### 2.2 每日悬赏任务与委托中心 (`QuestCommands` & `QuestManager`)
+
+自动监听全服玩家的挖掘方块、开采矿石、击杀怪物与累计在线时长，每日零点自动刷新重置：
+
+| 指令格式 | 权限要求 | 功能说明 |
+| :--- | :--- | :--- |
+| `/quest` (别名 `/quests`, `/mission`) | 全体玩家 | 打开 27 格每日悬赏任务中心 GUI，实时查看【勤劳开拓者】【矿脉勘探家】【荒野守卫者】【忠实旅人】进度条，达成后点击一键领取金币与【祈愿抽奖钥匙】奖励 |
+| `/quest editor` | OP (Level 2) | 生成离线单文件任务编辑器 `quest_editor.html`，内嵌当前任务、物品/方块/实体注册表与触发器列表，完全离线 |
+| `/quest web` | OP (Level 2) | 启动任务在线编辑服务（默认端口 `11088`），浏览器打开控制台输出的带令牌链接即可在线编辑并直接保存回 `quests.json`；`/quest web <端口>` 指定端口，`/quest web status` 查看、`/quest web stop` 关闭。保存前整份校验，失败不覆盖文件 |
+
+### 2.3 称号商城与个人衣橱 (`TitleCommands` & `TitleManager`)
+
+| 指令格式 | 权限要求 | 功能说明 |
+| :--- | :--- | :--- |
+| `/title` 或 `/titles` | 全体玩家 | 打开 27 格称号商城与个人衣橱 GUI，支持购买、佩戴或卸下 `§b[开拓先锋]`、`§a[建筑巨匠]`、`§c[无双战神]`、`§d[天选欧皇]`、`§6§l[富甲天下]` 等炫彩头衔 |
+| `/title grant <玩家> <称号ID>` | OP (Level 2) | 免费授予指定玩家某个头衔称号 |
+| `/title create <称号ID> <价格> <彩色显示名>` | OP (Level 2) | 在线动态创建全新的服务器专属头衔并上架称号商城 |
+
+## 3. 其余全套商业、城镇与 CMI 系统指令总览
+
+- **官方动态系统商城 (`/shop`, `/mall`, `/sysshop`)**: 多分类与分页浏览，点击商品后选择买1/一组、卖1/背包全部，按动态曲线逐件结算。`/shop admin` 编辑分类、商品、基准价格、绝对与百分比限价、涨跌幅与恢复速度；原 `/shop add <分类> <买价> <卖价>` 保留。
+- **Gift 礼物与礼包中心 (`/gift`, `/kits`)**: `/gift box` 打开私人待拆礼盒、`/kits` 打开可视化礼包领取中心、`/gift send <玩家> [寄语]` 打包赠送主手物品、`/gift money <玩家> <金额> [寄语]` 发送金币红包、`/gift dropall <金币> <寄语>` 全服福利空投。
+- **CDK 兑换码系统 (`/cdk`, `/redeem`)**: `/redeem <兑换码>` 激活领奖（内置 `HABI666` 与 `VIP2026`）、`/cdk create`、`/cdk batch` 批量生成卡密、`/cdk additem`、`/cdk setgroup`、`/cdk list`。
+- **保底抽奖盲盒 (`/lottery`, `/crate`, `/gacha`)**: 打开祈愿神殿 GUI（内置普通/史诗/传说三池，实时公示概率与保底进度，支持单抽、九折十连抽与 `/lottery givekey` 实体钥匙）。
+- **箱子商店 (`/qs`, `/chestshop`)**: 手持商品左键单箱/木桶/潜影盒，确认并输入价格创建；`/qs mine` 管理自己的商店，`/qs admin` 管理全服商店。交易须靠近原箱，顾客无需取得开箱/建造权限。
+- **全球拍卖行 (`/ah`, `/auction`)**: `/ah` 打开 54 格拍卖行 GUI、`/ah sell` 一口价上架、`/ah bidstart` 竞拍上架、`/ah bid`、`/ah buy`、`/ah claim` 待领邮箱。
+- **面对面安全交易 (`/trade`)**: `/trade <玩家>`、`/trade accept`、`/trade deny`（54 格双栏防骗 GUI）。
+- **城镇与同盟 (`/town`, `/tc`)**: `/town create`、`/town claim`、`/town spawn`、`/town deposit`、`/town withdraw`、`/town invite`、`/town ally`、`/town plot <forsale|buy>`、`/town toggle <pvp|explosion|open>`、`/tc`。
+- **CMI 45+ 指令套件**: `/tpa`、`/tpahere`、`/tpaall`、`/tpaccept`、`/tpdeny`、`/tpcancel`、`/tpatoggle`、`/sethome`、`/home`、`/homes`、`/setwarp`、`/warp`、`/warps`、`/spawn`、`/back`、`/rtp`、`/jump`、`/top`、8大随身工作站（`/wb`, `/ec`, `/anvil`, `/grindstone`, `/stonecutter`, `/loom`, `/cartography`, `/smithing`, `/trash`）、`/invsee`、`/endersee`、`/jail`、`/tempban`、`/freeze`、`/warn`、`/mute`、`/vanish`、`/sudo`、`/clearchat`、`/daily`、`/worth`、`/sellhand`、`/sellall`、`/bounty`、`/mail`、`/helpop`、`/playtime`、`/near`、`/ping`、`/nick`、`/fly`、`/god`、`/heal`、`/feed`、`/repair`、`/hat`、`/glow`、`/ext`、`/suicide`、`/clearlag`。
+
+## 4. 服务端运营套件（多世界 / 独立大厅 / 菜单与展示）
+
+- 完整中文运维说明见 **[服务端运营套件手册](docs/SERVER_SUITE.md)**：安装升级备份、七个默认世界、默认菜单全部路由、指令权限与重启边界、地图导入、资源重置与安全恢复、新手奖励及个人设置。无需客户端模组。
+- 传送移除玩家时 `ChunkMap.removeEntity` 的 fastutil 迭代崩溃已修复（遍历改为快照，不改移除顺序）；原因、改动与验证见 **[传送移除玩家 NPE 修复](docs/CHUNKMAP_ENTITY_REMOVE_FIX.md)**。
+- 新增 `/habi reloadall` 一次性重载本模组全部数据文件（权限、经济、领地、城镇、CMI、商店、拍卖、礼包、兑换、抽奖、商城、墓碑、任务、称号、红包及运营配置）；逐模块隔离失败并保留旧数据，世界创建/导入/启停仍需重启。`/habi reload` 仍只重载运营配置。
+- **规则边界**：原版三界保留原版共享规则；独立 `mobs/mobGrief/weather/fixedTime/difficulty/borderSize` 仅支持 `habi_train_survive:...`，不支持的原版设置会被拒绝。其他世界保护与饥饿开关仍适用于两类世界。
+- 本次未部署生产服。`./gradlew test build` 成功；83 项单元测试中 75 通过、8 因符号链接环境权限跳过、零失败。84 项隔离服务端场景断言通过，涵盖七世界启动、模拟玩家交互、重启/资源备份重置、标准地图导入、原版旧存档升级及管理状态反馈；真实客户端快捷键、输入和视觉仍需人工验收，详见手册第 9 节。升级前务必做整套停服一致性快照。
+
+以上旧版测试数字保留作历史记录；本轮动态经济与地皮的构建、测试和验收边界以 `docs/ECONOMY_PLOTS.md` 的验证状态为准。

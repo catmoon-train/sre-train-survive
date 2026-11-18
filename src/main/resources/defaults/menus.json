@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "sneakSwapEnabled": true,
+  "defaultMenu": "main",
+  "menus": {
+    "main": {
+      "title": "星穹生存 · 功能导航",
+      "rows": 6,
+      "permission": "",
+      "back": "",
+      "buttons": [
+        {"slot": 4, "icon": "minecraft:nether_star", "name": "欢迎，{player}", "lore": ["余额: {balance} · 权限组: {group}", "当前世界: {world}", "在线人数: {online} · 家数量: {homes}", "潜行 + 交换副手打开菜单（可配置）"], "actions": [{"type": "MESSAGE", "value": "使用 /menu 或 /cd 随时打开导航。"}]},
+        {"slot": 10, "icon": "minecraft:compass", "name": "世界导航", "lore": ["主世界、下界、末地与主城", "资源世界不再加载"], "actions": [{"type": "OPEN", "value": "worlds"}]},
+        {"slot": 11, "icon": "minecraft:beacon", "name": "返回主城", "lore": ["返回独立主城 · /hub", "遵守战斗限制与传送读条"], "actions": [{"type": "PLAYER_COMMAND", "value": "hub"}]},
+        {"slot": 12, "icon": "minecraft:ender_pearl", "name": "生存世界随机传送", "lore": ["永久生存地图: minecraft:overworld", "剩余冷却: {rtp_cooldown} 秒", "成功后才扣除费用"], "permission": "habi.cmi.rtp", "actions": [{"type": "RTP", "value": "minecraft:overworld"}]},
+        {"slot": 14, "icon": "minecraft:red_bed", "name": "我的家", "lore": ["浏览已设置的 {homes} 个家", "/sethome 名称 · /delhome 名称"], "permission": "habi.cmi.home", "actions": [{"type": "OPEN", "value": "homes"}]},
+        {"slot": 15, "icon": "minecraft:ender_eye", "name": "公共地标", "lore": ["浏览公共传送点及传送费用"], "permission": "habi.cmi.warp", "actions": [{"type": "OPEN", "value": "warps"}]},
+        {"slot": 16, "icon": "minecraft:golden_shovel", "name": "领地管理", "lore": ["打开现有领地控制面板", "圈地、成员与保护设置 · /claim"], "actions": [{"type": "PLAYER_COMMAND", "value": "claim"}]},
+        {"slot": 19, "icon": "minecraft:oak_door", "name": "城镇导航", "lore": ["查看城镇公告、居民与公共传送", "管理自己的城镇请使用 /town"], "actions": [{"type": "OPEN", "value": "towns"}]},
+        {"slot": 20, "icon": "minecraft:gold_ingot", "name": "我的余额", "lore": ["当前余额: {balance}", "查询账户 · /bal"], "actions": [{"type": "PLAYER_COMMAND", "value": "bal"}]},
+        {"slot": 21, "icon": "minecraft:emerald", "name": "动态系统商城", "lore": ["买得多涨价、卖得多降价", "价格限幅、逐件结算，闲时逐渐回归基准"], "actions": [{"type": "PLAYER_COMMAND", "value": "shop"}]},
+        {"slot": 22, "icon": "minecraft:chest", "name": "拍卖行", "lore": ["浏览玩家寄售 · /ah"], "actions": [{"type": "PLAYER_COMMAND", "value": "ah"}]},
+        {"slot": 23, "icon": "minecraft:player_head", "name": "安全交易", "lore": ["选择在线玩家并发送交易请求", "请核对真实账户名，不使用昵称"], "actions": [{"type": "OPEN", "value": "players"}]},
+        {"slot": 24, "icon": "minecraft:pink_shulker_box", "name": "私人礼盒", "lore": ["查看收到的礼物与礼金 · /gift"], "actions": [{"type": "PLAYER_COMMAND", "value": "gift"}]},
+        {"slot": 25, "icon": "minecraft:ender_chest", "name": "礼包中心", "lore": ["查看礼包费用及各礼包领取冷却 · /kits"], "actions": [{"type": "PLAYER_COMMAND", "value": "kits"}]},
+        {"slot": 28, "icon": "minecraft:clock", "name": "每日签到", "lore": ["领取现有签到奖励 · /daily", "不可重复领取当日奖励"], "permission": "habi.cmi.daily", "actions": [{"type": "PLAYER_COMMAND", "value": "daily"}]},
+        {"slot": 29, "icon": "minecraft:written_book", "name": "任务中心", "lore": ["查看每日任务与进度 · /quest"], "actions": [{"type": "PLAYER_COMMAND", "value": "quest"}]},
+        {"slot": 30, "icon": "minecraft:firework_rocket", "name": "幸运抽奖", "lore": ["打开现有抽奖页面 · /lottery"], "actions": [{"type": "PLAYER_COMMAND", "value": "lottery"}]},
+        {"slot": 31, "icon": "minecraft:name_tag", "name": "称号中心", "lore": ["查看和装备已解锁称号 · /title"], "actions": [{"type": "PLAYER_COMMAND", "value": "title"}]},
+        {"slot": 32, "icon": "minecraft:soul_lantern", "name": "墓碑找回", "lore": ["查看死亡墓碑与找回方式 · /grave"], "actions": [{"type": "PLAYER_COMMAND", "value": "grave"}]},
+        {"slot": 33, "icon": "minecraft:book", "name": "新手指南", "lore": ["生存、圈地、赚钱、交易与死亡找回", "随时使用 /guide 重新查看"], "actions": [{"type": "PLAYER_COMMAND", "value": "guide"}]},
+        {"slot": 34, "icon": "minecraft:paper", "name": "服务器规则", "lore": ["阅读服务器规则 · /rules"], "actions": [{"type": "PLAYER_COMMAND", "value": "rules"}]},
+        {"slot": 37, "icon": "minecraft:obsidian", "name": "前往地狱", "lore": ["身边3格内有地狱门方块：按8:1坐标前往", "无门或落点不安全：安全随机传送"], "actions": [{"type": "PLAYER_COMMAND", "value": "nether"}]},
+        {"slot": 38, "icon": "minecraft:ender_eye", "name": "前往末地", "lore": ["身边3格内有末地门方块：按当前坐标前往", "无门或落点不安全：安全随机传送"], "actions": [{"type": "PLAYER_COMMAND", "value": "end"}]},
+        {"slot": 35, "icon": "minecraft:gold_block", "name": "经济排行榜", "lore": ["每页45名 · 显示自己的名次", "点击打开 · /baltop"], "actions": [{"type": "PLAYER_COMMAND", "value": "baltop"}]},
+        {"slot": 36, "icon": "minecraft:firework_star", "name": "拼手气红包", "lore": ["抢当前未抢完的红包", "发红包: /redpacket send <总额> <份数> [留言]", "5 分钟内未抢完自动退回"], "actions": [{"type": "PLAYER_COMMAND", "value": "redpacket"}]},
+        {"slot": 39, "icon": "minecraft:repeater", "name": "个人设置", "lore": ["侧边栏、公告、提示音与免打扰", "打开偏好设置 · /settings"], "actions": [{"type": "PLAYER_COMMAND", "value": "settings"}]},
+        {"slot": 40, "icon": "minecraft:ender_chest", "name": "多人商铺", "lore": ["购买玩家商品，或5000金币开设电子店铺", "虚拟仓库、商品管理与容量升级"], "actions": [{"type": "PLAYER_COMMAND", "value": "playershop"}]},
+        {"slot": 42, "icon": "minecraft:barrel", "name": "我的箱子商店", "lore": ["查看并管理自己拥有的箱子商店", "手持物品左键箱子，可确认创建商店"], "actions": [{"type": "PLAYER_COMMAND", "value": "qs mine"}]},
+        {"slot": 43, "icon": "minecraft:grass_block", "name": "地皮大厅", "lore": ["独立地皮世界 · 64×64建筑地皮", "每人首块免费，后续每块默认10000金币"], "actions": [{"type": "PLAYER_COMMAND", "value": "plot"}]},
+        {"slot": 44, "icon": "minecraft:writable_book", "name": "自定义菜单目录", "lore": ["查看可以使用的全部菜单", "管理员可在 /menu edit 创建和编辑菜单"], "actions": [{"type": "PLAYER_COMMAND", "value": "menus"}]},
+        {"slot": 45, "icon": "minecraft:chest", "name": "箱子商店导购", "lore": ["浏览全服实体箱子商店"], "actions": [{"type": "PLAYER_COMMAND", "value": "qs browse"}]},
+        {"slot": 41, "icon": "minecraft:command_block", "name": "管理中心", "lore": ["运营状态、世界管理与配置重载", "仅授权管理员可进入"], "permission": "habi.admin", "actions": [{"type": "OPEN", "value": "admin"}]},
+        {"slot": 49, "icon": "minecraft:barrier", "name": "关闭菜单", "lore": ["也可以按 Esc 关闭"], "actions": [{"type": "CLOSE"}]}
+      ]
+    },
+    "worlds": {"title": "世界导航 · 选择目的地", "rows": 6, "back": "main", "dynamic": "worlds", "buttons": []},
+    "homes": {"title": "我的家 · {homes} 个", "rows": 6, "permission": "habi.cmi.home", "back": "main", "dynamic": "homes", "buttons": []},
+    "warps": {"title": "公共地标 · 传送费用见说明", "rows": 6, "permission": "habi.cmi.warp", "back": "main", "dynamic": "warps", "buttons": []},
+    "towns": {"title": "城镇导航 · 公共及同盟传送", "rows": 6, "back": "main", "dynamic": "towns", "buttons": []},
+    "players": {"title": "安全交易 · 选择在线玩家", "rows": 6, "back": "main", "dynamic": "players", "buttons": []},
+    "admin": {
+      "title": "管理中心 · 普通按钮不提权",
+      "rows": 3,
+      "permission": "habi.admin",
+      "back": "main",
+      "dynamic": "admin",
+      "buttons": [
+        {"slot": 4, "icon": "minecraft:writable_book", "name": "系统参数编辑", "lore": ["商店物价、电子商铺、地标与地皮", "经济、领地、世界、称号与权限组配额"], "actions": [{"type": "PLAYER_COMMAND", "value": "habi edit"}]},
+        {"slot": 10, "icon": "minecraft:comparator", "name": "核心运行状态", "lore": ["已加载世界: {loaded_worlds} / {worlds}", "在线玩家: {online}", "查看待重启操作与详情 · /habi status"], "actions": [{"type": "PLAYER_COMMAND", "value": "habi status"}]},
+        {"slot": 11, "icon": "minecraft:grass_block", "name": "世界运营列表", "lore": ["查看多世界登记与状态 · /worldadmin list"], "actions": [{"type": "PLAYER_COMMAND", "value": "worldadmin list"}]},
+        {"slot": 12, "icon": "minecraft:map", "name": "浏览世界", "lore": ["仅浏览与传送，不执行危险操作"], "actions": [{"type": "OPEN", "value": "worlds"}]},
+        {"slot": 13, "icon": "minecraft:item_frame", "name": "自定义菜单编辑器", "lore": ["编辑布局、图标、说明和点击动作", "草稿预览后保存生效 · /menu edit"], "actions": [{"type": "PLAYER_COMMAND", "value": "menu edit"}]},
+        {"slot": 14, "icon": "minecraft:redstone", "name": "重载菜单配置", "lore": ["严格验证；失败保留有效配置", "仅原版 OP 2 级可执行 /menu reload"], "actions": [{"type": "PLAYER_COMMAND", "value": "menu reload"}]},
+        {"slot": 15, "icon": "minecraft:observer", "name": "重载运营配置", "lore": ["执行 /habi reload，世界停用/重置需重启", "危险世界操作必须使用专用命令确认"], "actions": [{"type": "PLAYER_COMMAND", "value": "habi reload"}]},
+        {"slot": 18, "icon": "minecraft:oak_door", "name": "返回主菜单", "lore": [], "actions": [{"type": "BACK"}]},
+        {"slot": 26, "icon": "minecraft:barrier", "name": "关闭", "lore": [], "actions": [{"type": "CLOSE"}]}
+      ]
+    }
+  }
+}

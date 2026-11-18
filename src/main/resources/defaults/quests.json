@@ -1,0 +1,89 @@
+{
+  "settings": {
+    "dailyCount": 5,
+    "weeklyCount": 5,
+    "timeZone": "Asia/Shanghai"
+  },
+  "daily": [
+    {"id":"daily_mine_any","title":"勤劳开拓者","description":"今日累计挖掘任意方块 200 个","icon":"minecraft:iron_pickaxe","tasks":[{"type":"mine_block","target":"*","amount":200,"display":"任意方块"}],"rewards":[{"type":"coin","amount":300},{"type":"item","item":"minecraft:bread","count":4}]},
+    {"id":"daily_mine_stone","title":"采石工","description":"挖掘 128 个石头","icon":"minecraft:stone_pickaxe","tasks":[{"type":"mine_block","target":"minecraft:stone","amount":128,"display":"石头"}],"rewards":[{"type":"coin","amount":250},{"type":"xp","amount":20}]},
+    {"id":"daily_mine_logs","title":"伐木工","description":"砍伐 64 个原木","icon":"minecraft:iron_axe","tasks":[{"type":"mine_block","target":"#minecraft:logs","amount":64,"display":"任意原木"}],"rewards":[{"type":"coin","amount":280},{"type":"item","item":"minecraft:oak_planks","count":16}]},
+    {"id":"daily_mine_coal","title":"煤炭开采","description":"挖掘 32 个煤矿石","icon":"minecraft:coal_ore","tasks":[{"type":"mine_block","target":"#minecraft:coal_ores","amount":32,"display":"煤矿石"}],"rewards":[{"type":"coin","amount":320},{"type":"item","item":"minecraft:torch","count":16}]},
+    {"id":"daily_mine_iron","title":"铁矿勘探","description":"挖掘 32 个铁矿石","icon":"minecraft:iron_ore","tasks":[{"type":"mine_block","target":"#minecraft:iron_ores","amount":32,"display":"铁矿石"}],"rewards":[{"type":"coin","amount":380},{"type":"xp","amount":40}]},
+    {"id":"daily_mine_copper","title":"铜矿收集","description":"挖掘 32 个铜矿石","icon":"minecraft:copper_ore","tasks":[{"type":"mine_block","target":"#minecraft:copper_ores","amount":32,"display":"铜矿石"}],"rewards":[{"type":"coin","amount":300},{"type":"item","item":"minecraft:raw_copper","count":8}]},
+    {"id":"daily_mine_sand","title":"沙土搬运","description":"挖掘 64 个沙子","icon":"minecraft:sand","tasks":[{"type":"mine_block","target":"#minecraft:sand","amount":64,"display":"沙子"}],"rewards":[{"type":"coin","amount":240},{"type":"item","item":"minecraft:glass","count":8}]},
+    {"id":"daily_kill_any","title":"荒野守卫者","description":"击杀任意生物或怪物 30 只","icon":"minecraft:iron_sword","tasks":[{"type":"kill_entity","target":"*","amount":30,"display":"任意生物"}],"rewards":[{"type":"coin","amount":420},{"type":"xp","amount":30}]},
+    {"id":"daily_kill_zombie","title":"清理尸群","description":"击杀 15 只僵尸","icon":"minecraft:zombie_spawn_egg","tasks":[{"type":"kill_entity","target":"minecraft:zombie","amount":15,"display":"僵尸"}],"rewards":[{"type":"coin","amount":360},{"type":"item","item":"minecraft:iron_ingot","count":2}]},
+    {"id":"daily_kill_skeleton","title":"骨箭威胁","description":"击杀 15 只骷髅","icon":"minecraft:skeleton_spawn_egg","tasks":[{"type":"kill_entity","target":"minecraft:skeleton","amount":15,"display":"骷髅"}],"rewards":[{"type":"coin","amount":360},{"type":"item","item":"minecraft:bone","count":16}]},
+    {"id":"daily_kill_spider","title":"蛛网清扫","description":"击杀 10 只蜘蛛","icon":"minecraft:spider_spawn_egg","tasks":[{"type":"kill_entity","target":"minecraft:spider","amount":10,"display":"蜘蛛"}],"rewards":[{"type":"coin","amount":320},{"type":"item","item":"minecraft:string","count":12}]},
+    {"id":"daily_kill_creeper","title":"拆除苦力怕","description":"击杀 8 只苦力怕","icon":"minecraft:creeper_spawn_egg","tasks":[{"type":"kill_entity","target":"minecraft:creeper","amount":8,"display":"苦力怕"}],"rewards":[{"type":"coin","amount":400},{"type":"item","item":"minecraft:gunpowder","count":8}]},
+    {"id":"daily_kill_cow","title":"牧场补给","description":"击杀 10 头牛","icon":"minecraft:cow_spawn_egg","tasks":[{"type":"kill_entity","target":"minecraft:cow","amount":10,"display":"牛"}],"rewards":[{"type":"coin","amount":300},{"type":"item","item":"minecraft:cooked_beef","count":8}]},
+    {"id":"daily_obtain_wheat","title":"麦田收成","description":"获得 32 个小麦","icon":"minecraft:wheat","tasks":[{"type":"obtain_item","target":"minecraft:wheat","amount":32,"display":"小麦"}],"rewards":[{"type":"coin","amount":300},{"type":"item","item":"minecraft:bread","count":6}]},
+    {"id":"daily_obtain_bread","title":"面包工坊","description":"获得 8 个面包","icon":"minecraft:bread","tasks":[{"type":"obtain_item","target":"minecraft:bread","amount":8,"display":"面包"}],"rewards":[{"type":"coin","amount":340},{"type":"item","item":"minecraft:wheat","count":16}]},
+    {"id":"daily_obtain_coal","title":"燃料储备","description":"获得 32 个煤炭","icon":"minecraft:coal","tasks":[{"type":"obtain_item","target":"minecraft:coal","amount":32,"display":"煤炭"}],"rewards":[{"type":"coin","amount":300},{"type":"item","item":"minecraft:torch","count":32}]},
+    {"id":"daily_obtain_iron","title":"铁锭需求","description":"获得 8 个铁锭","icon":"minecraft:iron_ingot","tasks":[{"type":"obtain_item","target":"minecraft:iron_ingot","amount":8,"display":"铁锭"}],"rewards":[{"type":"coin","amount":420},{"type":"item","item":"minecraft:coal","count":16}]},
+    {"id":"daily_craft_sticks","title":"木棍加工","description":"合成 32 根木棍","icon":"minecraft:stick","tasks":[{"type":"craft_item","target":"minecraft:stick","amount":32,"display":"木棍"}],"rewards":[{"type":"coin","amount":240},{"type":"xp","amount":20}]},
+    {"id":"daily_craft_torch","title":"照亮矿洞","description":"合成 16 个火把","icon":"minecraft:torch","tasks":[{"type":"craft_item","target":"minecraft:torch","amount":16,"display":"火把"}],"rewards":[{"type":"coin","amount":260},{"type":"item","item":"minecraft:coal","count":8}]},
+    {"id":"daily_place_torch","title":"夜间照明","description":"放置 16 个火把","icon":"minecraft:lantern","tasks":[{"type":"place_block","target":"minecraft:torch","amount":16,"display":"火把"}],"rewards":[{"type":"coin","amount":260},{"type":"xp","amount":15}]},
+    {"id":"daily_place_any","title":"建设者","description":"放置任意方块 64 个","icon":"minecraft:oak_planks","tasks":[{"type":"place_block","target":"*","amount":64,"display":"任意方块"}],"rewards":[{"type":"coin","amount":280},{"type":"item","item":"minecraft:oak_planks","count":16}]},
+    {"id":"daily_submit_cobble","title":"石材交付","description":"提交 64 个圆石","icon":"minecraft:cobblestone","tasks":[{"type":"submit_item","target":"minecraft:cobblestone","amount":64,"display":"圆石"}],"rewards":[{"type":"coin","amount":360},{"type":"xp","amount":25}]},
+    {"id":"daily_submit_wheat","title":"粮食委托","description":"提交 32 个小麦","icon":"minecraft:hay_block","tasks":[{"type":"submit_item","target":"minecraft:wheat","amount":32,"display":"小麦"}],"rewards":[{"type":"coin","amount":400},{"type":"item","item":"minecraft:bread","count":8}]},
+    {"id":"daily_use_bread","title":"补充体力","description":"使用 4 个面包","icon":"minecraft:apple","tasks":[{"type":"use_item","target":"minecraft:bread","amount":4,"display":"面包"}],"rewards":[{"type":"coin","amount":220},{"type":"xp","amount":10}]},
+    {"id":"daily_online_30m","title":"忠实旅人","description":"累计在线 30 分钟","icon":"minecraft:clock","tasks":[{"type":"online_time","target":"","amount":1800,"display":"在线时间"}],"rewards":[{"type":"coin","amount":400},{"type":"item","item":"minecraft:bread","count":6}]}
+  ],
+  "weekly": [
+    {"id":"weekly_mine_any","title":"大规模采掘","description":"本周累计挖掘任意方块 2000 个","icon":"minecraft:diamond_pickaxe","tasks":[{"type":"mine_block","target":"*","amount":2000,"display":"任意方块"}],"rewards":[{"type":"coin","amount":3000},{"type":"xp","amount":300}]},
+    {"id":"weekly_mine_diamond","title":"钻石猎手","description":"挖掘 16 个钻石矿石","icon":"minecraft:diamond_ore","tasks":[{"type":"mine_block","target":"#minecraft:diamond_ores","amount":16,"display":"钻石矿石"}],"rewards":[{"type":"coin","amount":2500},{"type":"item","item":"minecraft:diamond","count":2}]},
+    {"id":"weekly_mine_iron","title":"铁矿工程","description":"挖掘 128 个铁矿石","icon":"minecraft:iron_ore","tasks":[{"type":"mine_block","target":"#minecraft:iron_ores","amount":128,"display":"铁矿石"}],"rewards":[{"type":"coin","amount":2000},{"type":"item","item":"minecraft:iron_ingot","count":16}]},
+    {"id":"weekly_mine_logs","title":"森林采伐","description":"砍伐 512 个原木","icon":"minecraft:golden_axe","tasks":[{"type":"mine_block","target":"#minecraft:logs","amount":512,"display":"任意原木"}],"rewards":[{"type":"coin","amount":1800},{"type":"xp","amount":200}]},
+    {"id":"weekly_mine_stone","title":"石料供应","description":"挖掘 1024 个石头","icon":"minecraft:stone","tasks":[{"type":"mine_block","target":"minecraft:stone","amount":1024,"display":"石头"}],"rewards":[{"type":"coin","amount":1600},{"type":"item","item":"minecraft:cobblestone","count":64}]},
+    {"id":"weekly_kill_any","title":"长期守卫","description":"击杀任意生物 300 只","icon":"minecraft:netherite_sword","tasks":[{"type":"kill_entity","target":"*","amount":300,"display":"任意生物"}],"rewards":[{"type":"coin","amount":3500},{"type":"xp","amount":400}]},
+    {"id":"weekly_kill_zombie","title":"尸潮清剿","description":"击杀 80 只僵尸","icon":"minecraft:zombie_head","tasks":[{"type":"kill_entity","target":"minecraft:zombie","amount":80,"display":"僵尸"}],"rewards":[{"type":"coin","amount":2200},{"type":"item","item":"minecraft:iron_ingot","count":8}]},
+    {"id":"weekly_kill_skeleton","title":"骨骼清扫","description":"击杀 80 只骷髅","icon":"minecraft:skeleton_skull","tasks":[{"type":"kill_entity","target":"minecraft:skeleton","amount":80,"display":"骷髅"}],"rewards":[{"type":"coin","amount":2200},{"type":"item","item":"minecraft:bone","count":64}]},
+    {"id":"weekly_kill_creeper","title":"爆破处理","description":"击杀 40 只苦力怕","icon":"minecraft:creeper_head","tasks":[{"type":"kill_entity","target":"minecraft:creeper","amount":40,"display":"苦力怕"}],"rewards":[{"type":"coin","amount":2000},{"type":"item","item":"minecraft:gunpowder","count":32}]},
+    {"id":"weekly_kill_enderman","title":"末影狩猎","description":"击杀 16 只末影人","icon":"minecraft:ender_pearl","tasks":[{"type":"kill_entity","target":"minecraft:enderman","amount":16,"display":"末影人"}],"rewards":[{"type":"coin","amount":2600},{"type":"item","item":"minecraft:ender_pearl","count":4}]},
+    {"id":"weekly_kill_blaze","title":"烈焰讨伐","description":"击杀 16 只烈焰人","icon":"minecraft:blaze_rod","tasks":[{"type":"kill_entity","target":"minecraft:blaze","amount":16,"display":"烈焰人"}],"rewards":[{"type":"coin","amount":2600},{"type":"xp","amount":250}]},
+    {"id":"weekly_kill_dragon","title":"终局挑战","description":"击杀 1 条末影龙","icon":"minecraft:dragon_head","tasks":[{"type":"kill_entity","target":"minecraft:ender_dragon","amount":1,"display":"末影龙"}],"rewards":[{"type":"coin","amount":10000},{"type":"item","item":"minecraft:elytra","count":1}]},
+    {"id":"weekly_obtain_iron","title":"钢铁储备","description":"获得 256 个铁锭","icon":"minecraft:iron_block","tasks":[{"type":"obtain_item","target":"minecraft:iron_ingot","amount":256,"display":"铁锭"}],"rewards":[{"type":"coin","amount":3000},{"type":"item","item":"minecraft:golden_apple","count":4}]},
+    {"id":"weekly_obtain_gold","title":"黄金积累","description":"获得 64 个金锭","icon":"minecraft:gold_ingot","tasks":[{"type":"obtain_item","target":"minecraft:gold_ingot","amount":64,"display":"金锭"}],"rewards":[{"type":"coin","amount":2400},{"type":"xp","amount":250}]},
+    {"id":"weekly_obtain_diamond","title":"钻石储备","description":"获得 32 个钻石","icon":"minecraft:diamond","tasks":[{"type":"obtain_item","target":"minecraft:diamond","amount":32,"display":"钻石"}],"rewards":[{"type":"coin","amount":4000},{"type":"item","item":"minecraft:diamond_sword","count":1}]},
+    {"id":"weekly_obtain_emerald","title":"绿宝石交易","description":"获得 16 个绿宝石","icon":"minecraft:emerald","tasks":[{"type":"obtain_item","target":"minecraft:emerald","amount":16,"display":"绿宝石"}],"rewards":[{"type":"coin","amount":2800},{"type":"item","item":"minecraft:bread","count":32}]},
+    {"id":"weekly_craft_iron_block","title":"压缩存储","description":"合成 16 个铁块","icon":"minecraft:iron_block","tasks":[{"type":"craft_item","target":"minecraft:iron_block","amount":16,"display":"铁块"}],"rewards":[{"type":"coin","amount":2600},{"type":"xp","amount":200}]},
+    {"id":"weekly_craft_diamond_sword","title":"武装自己","description":"合成 1 把钻石剑","icon":"minecraft:diamond_sword","tasks":[{"type":"craft_item","target":"minecraft:diamond_sword","amount":1,"display":"钻石剑"}],"rewards":[{"type":"coin","amount":2200},{"type":"xp","amount":150}]},
+    {"id":"weekly_craft_bread","title":"长期储备粮","description":"合成 64 个面包","icon":"minecraft:hay_block","tasks":[{"type":"craft_item","target":"minecraft:bread","amount":64,"display":"面包"}],"rewards":[{"type":"coin","amount":1800},{"type":"item","item":"minecraft:cooked_beef","count":16}]},
+    {"id":"weekly_place_any","title":"大型施工","description":"放置任意方块 512 个","icon":"minecraft:lantern","tasks":[{"type":"place_block","target":"*","amount":512,"display":"任意方块"}],"rewards":[{"type":"coin","amount":2400},{"type":"xp","amount":220}]},
+    {"id":"weekly_place_lantern","title":"灯火通明","description":"放置 16 个海晶灯或灯笼","icon":"minecraft:sea_lantern","tasks":[{"type":"place_block","target":"minecraft:lantern","amount":16,"display":"灯笼"}],"rewards":[{"type":"coin","amount":2000},{"type":"item","item":"minecraft:glowstone","count":8}]},
+    {"id":"weekly_submit_iron","title":"铁锭交付","description":"提交 128 个铁锭","icon":"minecraft:iron_ingot","tasks":[{"type":"submit_item","target":"minecraft:iron_ingot","amount":128,"display":"铁锭"}],"rewards":[{"type":"coin","amount":3500},{"type":"item","item":"minecraft:diamond","count":3}]},
+    {"id":"weekly_submit_diamond","title":"钻石委托","description":"提交 16 个钻石","icon":"minecraft:diamond","tasks":[{"type":"submit_item","target":"minecraft:diamond","amount":16,"display":"钻石"}],"rewards":[{"type":"coin","amount":4200},{"type":"item","item":"minecraft:netherite_ingot","count":1}]},
+    {"id":"weekly_submit_beef","title":"炊事班","description":"提交 64 个熟牛肉","icon":"minecraft:cooked_beef","tasks":[{"type":"submit_item","target":"minecraft:cooked_beef","amount":64,"display":"熟牛肉"}],"rewards":[{"type":"coin","amount":2400},{"type":"item","item":"minecraft:golden_carrot","count":16}]},
+    {"id":"weekly_online_3h","title":"常驻旅人","description":"本周累计在线 3 小时","icon":"minecraft:clock","tasks":[{"type":"online_time","target":"","amount":10800,"display":"在线时间"}],"rewards":[{"type":"coin","amount":2800},{"type":"xp","amount":200}]}
+  ],
+  "chapters": [
+    {
+      "id": "chapter_survival",
+      "title": "生存入门",
+      "description": "从第一块木头开始，建立你的生存基础",
+      "icon": "minecraft:grass_block",
+      "quests": [
+        {"id":"ch_wood","title":"第一块木头","description":"砍下一棵树，获得木材","icon":"minecraft:oak_log","x":0,"y":0,"requires":[],"tasks":[{"type":"mine_block","target":"#minecraft:logs","amount":16,"display":"任意原木"}],"rewards":[{"type":"coin","amount":200},{"type":"xp","amount":20}]},
+        {"id":"ch_pickaxe","title":"石制工具","description":"合成一把石镐，准备深入地下","icon":"minecraft:stone_pickaxe","x":1,"y":0,"requires":["ch_wood"],"tasks":[{"type":"craft_item","target":"minecraft:stone_pickaxe","amount":1,"display":"石镐"}],"rewards":[{"type":"coin","amount":300},{"type":"item","item":"minecraft:bread","count":8}]},
+        {"id":"ch_stone","title":"地下采集","description":"挖掘足够的石头，为建造做准备","icon":"minecraft:cobblestone","x":2,"y":0,"requires":["ch_pickaxe"],"tasks":[{"type":"mine_block","target":"minecraft:stone","amount":64,"display":"石头"}],"rewards":[{"type":"coin","amount":400},{"type":"xp","amount":40}]},
+        {"id":"ch_shelter","title":"搭建庇护所","description":"放置方块建设你的第一个据点","icon":"minecraft:oak_planks","x":3,"y":0,"requires":["ch_stone"],"tasks":[{"type":"place_block","target":"*","amount":128,"display":"任意方块"}],"rewards":[{"type":"coin","amount":600},{"type":"xp","amount":50}]},
+        {"id":"ch_food","title":"稳定口粮","description":"提交小麦换取稳定的食物供给","icon":"minecraft:hay_block","x":1,"y":1,"requires":["ch_wood"],"tasks":[{"type":"submit_item","target":"minecraft:wheat","amount":32,"display":"小麦"}],"rewards":[{"type":"coin","amount":500},{"type":"item","item":"minecraft:bread","count":16},{"type":"xp","amount":30}]},
+        {"id":"ch_iron","title":"铁器时代","description":"开采铁矿石，获得粗铁","icon":"minecraft:raw_iron","x":2,"y":1,"requires":["ch_stone"],"tasks":[{"type":"obtain_item","target":"minecraft:raw_iron","amount":16,"display":"粗铁"}],"rewards":[{"type":"coin","amount":800},{"type":"xp","amount":100}]},
+        {"id":"ch_smith","title":"铁匠之路","description":"将铁锭压缩成铁块，掌握规模化冶炼","icon":"minecraft:iron_block","x":3,"y":1,"requires":["ch_iron"],"tasks":[{"type":"craft_item","target":"minecraft:iron_block","amount":1,"display":"铁块"}],"rewards":[{"type":"coin","amount":1500},{"type":"item","item":"minecraft:diamond","count":2},{"type":"xp","amount":200}]}
+      ]
+    },
+    {
+      "id": "chapter_traveler",
+      "title": "列车旅人",
+      "description": "长期在线与交易，成为经验丰富的旅人",
+      "icon": "minecraft:minecart",
+      "quests": [
+        {"id":"chv_online","title":"熟悉列车","description":"累计在线 1 小时","icon":"minecraft:clock","x":0,"y":0,"requires":[],"tasks":[{"type":"online_time","target":"","amount":3600,"display":"在线时间"}],"rewards":[{"type":"coin","amount":400},{"type":"xp","amount":30}]},
+        {"id":"chv_trade","title":"初次交易","description":"收集绿宝石，体验与村民的交易","icon":"minecraft:emerald","x":1,"y":0,"requires":["chv_online"],"tasks":[{"type":"obtain_item","target":"minecraft:emerald","amount":8,"display":"绿宝石"}],"rewards":[{"type":"coin","amount":800},{"type":"item","item":"minecraft:bread","count":16}]},
+        {"id":"chv_long","title":"长途旅程","description":"累计在线 6 小时，成为常驻旅人","icon":"minecraft:minecart","x":2,"y":0,"requires":["chv_trade"],"tasks":[{"type":"online_time","target":"","amount":21600,"display":"在线时间"}],"rewards":[{"type":"coin","amount":2000},{"type":"item","item":"minecraft:diamond","count":4},{"type":"xp","amount":300}]}
+      ]
+    }
+  ]
+}

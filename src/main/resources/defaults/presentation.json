@@ -1,0 +1,32 @@
+{
+  "announcementsEnabled": true,
+  "announcementIntervalSeconds": 180,
+  "announcements": [
+    "§6[公告] §f/menu 打开主菜单，/guide 查看新手指南。",
+    "§6[公告] §f/daily 每日签到；/gift box 领取礼物。",
+    "§6[公告] §f请在生存世界安家并圈地保护，/nether 前往地狱，/end 前往末地。",
+    "§6[公告] §f/settings 可关闭侧栏、公告和本模块提示音。"
+  ],
+  "joinLeaveEnabled": true,
+  "joinMessage": "§a+ §f{player} §7加入了服务器 ({online}/{max})",
+  "leaveMessage": "§c- §f{player} §7离开了服务器",
+  "sidebarEnabled": true,
+  "refreshSeconds": 5,
+  "sidebarTitle": "§6§l哈比生存",
+  "sidebarLines": [
+    "§f玩家: §e{player}",
+    "§f余额: §a{balance}",
+    "§f世界: §b{world}",
+    "§f组别: {group}",
+    "§f在线: §a{online}§7/{max}",
+    "§e/menu §7主菜单",
+    "§7/settings 个性设置"
+  ],
+  "tabEnabled": true,
+  "tabHeader": "§6§l哈比生存服\n§f欢迎 {player} §7| {group}",
+  "tabFooter": "§7在线 §a{online}§7/{max} §8| §e/menu §8| §e/guide\n§7请文明游戏，共建友善社区",
+  "defaultSidebar": true,
+  "defaultAnnouncements": true,
+  "defaultSounds": true,
+  "settingsTitle": "个人设置"
+}

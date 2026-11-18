@@ -1,0 +1,541 @@
+{
+  "aliases": {
+    "tpyes": "tpaccept",
+    "tpno": "tpdeny",
+    "thru": "jump",
+    "ec": "enderchest",
+    "wb": "workbench",
+    "craft": "workbench",
+    "dispose": "trash",
+    "ecsee": "endersee",
+    "signin": "daily",
+    "staffhelp": "helpop",
+    "extinguish": "ext",
+    "v": "vanish",
+    "cc": "clearchat"
+  },
+  "commands": [
+    {
+      "path": "sethome",
+      "category": "travel",
+      "description": "将当前位置设为自己的家，可指定名称；不填名称时设置默认家。",
+      "permission": "玩家公开可用，无命名权限检查；新增家受基础及权限组额度与永久购买额度之和限制，覆盖已有家不占新额度；原版管理员权限等级至少2可绕过数量上限。"
+    },
+    {
+      "path": "delhome",
+      "category": "travel",
+      "description": "按名称删除自己的家；不退还已购买额度或金币，也不重置购买次数。",
+      "permission": "玩家公开可用，无命名权限检查；只能删除自己已有的家。"
+    },
+    {
+      "path": "home",
+      "category": "travel",
+      "description": "传送到自己指定名称的家，不填名称时返回默认家。",
+      "permission": "玩家公开可用，无命名权限检查；家必须存在且坐标有效；战斗、监禁或冻结期间不可传送，读条中移动或受伤会打断；目标世界另受开放、通行权限、人数与进入费用检查。"
+    },
+    {
+      "path": "homes",
+      "category": "travel",
+      "description": "查看自己的家、坐标及已用额度，并提供传送、删除和购买额外额度按钮。",
+      "permission": "玩家公开可用，无命名权限检查；按钮触发的操作另按各自条件检查。"
+    },
+    {
+      "path": "homes buy",
+      "category": "travel",
+      "description": "打开确认界面，永久购买额外家上限加1；依次花费100、500、900金币，此后每次增加400金币，与基础及权限组额度叠加。",
+      "permission": "玩家公开可用，无命名权限检查；须确认购买、存活且非旁观，额度未达安全上限，报价仍有效且金币充足、余额有效；取消不扣费，删除家不退款、不重置价格。"
+    },
+    {
+      "path": "buyhome",
+      "category": "travel",
+      "description": "直接打开家额度购买确认界面，每次永久增加1个家上限；价格为100、500、900金币，此后每次增加400金币。",
+      "permission": "玩家公开可用，无命名权限检查；须确认购买、存活且非旁观，额度未达安全上限，报价仍有效且金币充足、余额有效；取消不扣费，额度与基础及权限组额度叠加，删除家不退款或重置价格。"
+    },
+    {
+      "path": "setwarp",
+      "category": "admin",
+      "description": "将当前位置设置为指定服务器地标，可附加非负传送费用，省略费用时为免费。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；权限组节点不能替代此原版权限检查。"
+    },
+    {
+      "path": "delwarp",
+      "category": "admin",
+      "description": "按名称删除已有服务器地标并保存。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；不按地标创建者判断授权。"
+    },
+    {
+      "path": "warp",
+      "category": "travel",
+      "description": "不带名称时打开公共地标选择界面，指定名称时传送到该地标。",
+      "permission": "玩家打开界面无需命名权限；实际传送须有 habi.cmi.warp 或原版管理员权限等级至少2，地标须存在、启用且配置有效，余额须足够；战斗、监禁或冻结时禁止传送，目标世界另检查通行条件与费用。"
+    },
+    {
+      "path": "warps",
+      "category": "travel",
+      "description": "打开公共地标选择界面，浏览目的地、说明与传送费用。",
+      "permission": "玩家公开可打开界面，无命名权限检查；点击传送另须 habi.cmi.warp 或原版管理员权限等级至少2，并满足地标、余额及传送条件；管理按钮另需 habi.landmark.admin 或原版管理员权限等级至少2。"
+    },
+    {
+      "path": "setspawn",
+      "category": "admin",
+      "description": "将当前位置设为服务器主城出生点并保存。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行。"
+    },
+    {
+      "path": "spawn",
+      "category": "travel",
+      "description": "传送到服务器主城出生点；自定义出生点不可用时使用主城默认出生点。",
+      "permission": "玩家公开可用，无命名权限检查；目的地须就绪；战斗、监禁或冻结期间不可传送，读条中移动或受伤会打断，仍须满足目标世界通行条件。"
+    },
+    {
+      "path": "back",
+      "category": "travel",
+      "description": "返回已记录的上一位置，包括死亡位置。",
+      "permission": "玩家公开可用，无命名权限检查；须有有效位置记录；战斗、监禁或冻结期间不可传送，读条中移动或受伤会打断，目标世界另受通行条件检查。"
+    },
+    {
+      "path": "tpa",
+      "category": "travel",
+      "description": "向在线玩家请求传送到对方身边，请求有效期为60秒。",
+      "permission": "玩家公开可用，无命名权限检查；不能请求自己，受发送冷却限制；对方须允许接收且未屏蔽自己，原版管理员权限等级至少2可绕过这两项；接受后的实际传送仍检查战斗、监禁、冻结及世界通行条件。"
+    },
+    {
+      "path": "tpahere",
+      "category": "travel",
+      "description": "邀请在线玩家传送到自己身边，请求有效期为60秒。",
+      "permission": "玩家公开可用，无命名权限检查；不能邀请自己，受发送冷却限制；对方须允许接收且未屏蔽自己，原版管理员权限等级至少2可绕过这两项；接受后的实际传送仍检查被传送者的战斗、监禁、冻结及世界通行条件。"
+    },
+    {
+      "path": "tpaall",
+      "category": "admin",
+      "description": "向全服其他在线玩家批量发送到自己身边集合的传送邀请。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；仍受发送冷却限制，可绕过接收开关和屏蔽；对方仍需接受，实际传送另检查被传送者的状态及世界通行条件。"
+    },
+    {
+      "path": "tpaccept",
+      "category": "travel",
+      "description": "接受当前待处理的传送请求，并按请求方向安排传送。",
+      "permission": "玩家公开可用，无命名权限检查；须有待处理请求且发起者在线，请求会定期过期清理；实际被传送者不能处于战斗、监禁或冻结状态，读条中移动或受伤会打断，并检查目标世界通行条件。"
+    },
+    {
+      "path": "tpdeny",
+      "category": "travel",
+      "description": "拒绝自己收到的待处理传送请求，并通知在线发起者。",
+      "permission": "玩家公开可用，无命名权限检查；须有待处理请求。"
+    },
+    {
+      "path": "tpcancel",
+      "category": "travel",
+      "description": "取消自己的传送读条、安全传送任务及已发出的待处理传送请求。",
+      "permission": "玩家公开可用，无命名权限检查；仅取消自己的任务和请求。"
+    },
+    {
+      "path": "tpatoggle",
+      "category": "travel",
+      "description": "切换自己是否接收其他玩家的传送请求。",
+      "permission": "玩家公开可用，无命名权限检查；原版管理员权限等级至少2的请求发起者可绕过此接收开关。"
+    },
+    {
+      "path": "rtp",
+      "category": "travel",
+      "description": "在当前或指定世界寻找安全荒野落点并随机传送；位于主城且未指定世界时前往主世界。",
+      "permission": "玩家公开可用，无固定命名权限检查；目标世界须支持随机传送并满足开放、通行权限、人数及进入费用条件，habi.world.admin 或原版管理员权限等级至少2可绕过世界开放等管理限制；战斗、监禁或冻结时禁止；受权限组冷却与读条限制，原版管理员权限等级至少2免冷却和读条，但仍须支付配置的随机传送费及适用的世界进入费。"
+    },
+    {
+      "path": "jump",
+      "category": "travel",
+      "description": "闪现到视线120格内命中的方块上方，并记录上一位置。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；必须命中方块；此命令直接闪现，不使用普通传送读条检查。"
+    },
+    {
+      "path": "enderchest",
+      "category": "tools",
+      "description": "打开自己的随身末影箱。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "workbench",
+      "category": "tools",
+      "description": "打开随身工作台进行合成。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "anvil",
+      "category": "tools",
+      "description": "打开随身铁砧进行修复、合并附魔或改名。",
+      "permission": "玩家公开可用，无命名权限检查；物品与经验消耗按铁砧界面规则结算。"
+    },
+    {
+      "path": "grindstone",
+      "category": "tools",
+      "description": "打开随身砂轮处理物品修复与去除附魔。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "stonecutter",
+      "category": "tools",
+      "description": "打开随身切石机加工石材。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "loom",
+      "category": "tools",
+      "description": "打开随身织布机制作旗帜图案。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "cartography",
+      "category": "tools",
+      "description": "打开随身制图台处理地图。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "smithing",
+      "category": "tools",
+      "description": "打开随身锻造台升级或装饰装备。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "trash",
+      "category": "tools",
+      "description": "打开随身垃圾桶，放入的物品在关闭界面后销毁。",
+      "permission": "玩家公开可用，无命名权限检查；销毁物品不可恢复。"
+    },
+    {
+      "path": "invsee",
+      "category": "admin",
+      "description": "打开在线目标的背包管理界面，可实时修改主背包、护甲和副手物品。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；目标须在线。"
+    },
+    {
+      "path": "endersee",
+      "category": "admin",
+      "description": "打开并管理在线目标的末影箱。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；目标须在线。"
+    },
+    {
+      "path": "daily",
+      "category": "rewards",
+      "description": "领取每日签到金币；奖励为100加连续天数乘25金币，连续天数奖励最多计20天。",
+      "permission": "玩家公开可用，无命名权限检查；按服务器本地日期每天仅能领取一次，原版管理员也不能重复领取。"
+    },
+    {
+      "path": "playtime",
+      "category": "social",
+      "description": "查看自己或指定在线玩家累计在线的时、分、秒。",
+      "permission": "查看自己和他人均无命名权限检查；无参数须玩家执行，指定目标须在线。"
+    },
+    {
+      "path": "worth",
+      "category": "economy",
+      "description": "查看主手物品的系统回收单价及整组估价。",
+      "permission": "玩家公开可用，无命名权限检查；须手持已配置正回收价的物品。"
+    },
+    {
+      "path": "setworth",
+      "category": "admin",
+      "description": "设置主手物品的系统回收单价；设为零时移除回收价格。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；主手须有物品，价格不得为负。"
+    },
+    {
+      "path": "sellhand",
+      "category": "economy",
+      "description": "将整组主手物品出售给系统并获得金币。",
+      "permission": "玩家公开可用，无命名权限检查；主手须有已配置正回收价的物品，出售后移除整组。"
+    },
+    {
+      "path": "sellall",
+      "category": "economy",
+      "description": "一键出售主背包内所有可回收物品，不处理护甲和副手。",
+      "permission": "玩家公开可用，无命名权限检查；只出售已配置正回收价的物品。"
+    },
+    {
+      "path": "bounty",
+      "category": "economy",
+      "description": "悬赏功能入口，使用子命令查看悬赏榜或追加赏金。",
+      "permission": "玩家公开可用，无命名权限检查；此入口本身不执行操作，须选择子命令。"
+    },
+    {
+      "path": "bounty list",
+      "category": "economy",
+      "description": "查看全服被悬赏玩家及其累计赏金池。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "bounty add",
+      "category": "economy",
+      "description": "为在线目标追加金币悬赏；其他玩家击杀该目标后可获得其累计赏金。",
+      "permission": "玩家公开可用，无命名权限检查；目标须在线且不能是自己，每次至少10金币，并须余额充足。"
+    },
+    {
+      "path": "mail",
+      "category": "social",
+      "description": "离线邮件入口，使用子命令读取、清空或发送邮件。",
+      "permission": "玩家公开可用，无命名权限检查；此入口本身不执行操作，须选择子命令。"
+    },
+    {
+      "path": "mail read",
+      "category": "social",
+      "description": "列出自己信箱中的全部邮件。",
+      "permission": "玩家公开可用，无命名权限检查；只能读取自己的信箱。"
+    },
+    {
+      "path": "mail clear",
+      "category": "social",
+      "description": "清空自己信箱中的全部邮件。",
+      "permission": "玩家公开可用，无命名权限检查；仅清空自己的信箱。"
+    },
+    {
+      "path": "mail send",
+      "category": "social",
+      "description": "按玩家名投递离线邮件；目标在线时会收到新邮件提醒。",
+      "permission": "玩家公开可用，无命名权限检查；目标须已有档案，无需在线；此发送分支没有禁言或屏蔽检查。"
+    },
+    {
+      "path": "helpop",
+      "category": "social",
+      "description": "向在线原版管理员发送包含自己名称、坐标和求助内容的工单。",
+      "permission": "玩家公开可发送，无命名权限检查；仅原版管理员权限等级至少2的在线玩家收到工单，不要求发送者具备管理员权限。"
+    },
+    {
+      "path": "near",
+      "category": "social",
+      "description": "查看同世界附近玩家及距离，默认半径100格，可指定10至1000格。",
+      "permission": "玩家公开可用，无命名权限检查；仅原版管理员权限等级至少2可在结果中看到开启隐身巡查的玩家。"
+    },
+    {
+      "path": "ping",
+      "category": "social",
+      "description": "查看自己或指定在线玩家的网络延迟。",
+      "permission": "查看自己和他人均无命名权限检查；无参数须玩家执行，指定目标须在线。"
+    },
+    {
+      "path": "suicide",
+      "category": "tools",
+      "description": "主动结束自己的生命以脱困。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "ext",
+      "category": "tools",
+      "description": "熄灭自己身上的火焰。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "glow",
+      "category": "tools",
+      "description": "切换自己的全身高亮发光效果。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "nick",
+      "category": "tools",
+      "description": "设置或清除自己的显示昵称，支持颜色符号；清除后恢复默认名称。",
+      "permission": "玩家公开可用，无命名权限检查；恢复默认名称须使用参数 off 或 clear，这些是昵称参数值而非字面子命令。"
+    },
+    {
+      "path": "ignore",
+      "category": "social",
+      "description": "切换是否屏蔽指定在线玩家的私聊与传送请求。",
+      "permission": "玩家公开可用，无命名权限检查；目标须在线；原版管理员权限等级至少2的发送者可绕过私聊及传送请求屏蔽，离线邮件不检查此屏蔽。"
+    },
+    {
+      "path": "tempban",
+      "category": "admin",
+      "description": "按分钟临时封禁在线玩家，记录原因并立即踢出，封禁期间禁止登录。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线，封禁时间为1至5256000分钟，须填写原因。"
+    },
+    {
+      "path": "unban",
+      "category": "admin",
+      "description": "按玩家名解除本模块档案中的封禁状态。",
+      "permission": "仅原版管理员权限等级至少2；目标须有档案，不要求在线；不等同于操作原版封禁名单。"
+    },
+    {
+      "path": "warn",
+      "category": "admin",
+      "description": "警告在线玩家并记录日期和原因；累计达到3次及以上时禁言60分钟。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线，须填写原因。"
+    },
+    {
+      "path": "setjail",
+      "category": "admin",
+      "description": "将当前位置设为指定名称的监狱关押点。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行。"
+    },
+    {
+      "path": "jail",
+      "category": "admin",
+      "description": "将在线玩家关入指定监狱，记录刑期、原因及关押前位置。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线、监狱须存在，刑期为1至525600分钟，须填写原因；关押传送使用内部纠正流程。"
+    },
+    {
+      "path": "unjail",
+      "category": "admin",
+      "description": "提前释放在线玩家，并在有记录时送回关押前位置。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线，返回传送使用内部纠正流程。"
+    },
+    {
+      "path": "freeze",
+      "category": "admin",
+      "description": "切换在线玩家的冻结审查状态，将其限制在记录位置附近。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线。"
+    },
+    {
+      "path": "vanish",
+      "category": "admin",
+      "description": "切换自己的管理员隐身巡查状态，持续维持隐身效果。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；不是普通玩家的隐身权限节点。"
+    },
+    {
+      "path": "sudo",
+      "category": "admin",
+      "description": "强制在线目标以其自身命令来源执行指定命令。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线；被执行的命令仍按目标自身权限判断，不提升为执行者权限。"
+    },
+    {
+      "path": "clearchat",
+      "category": "admin",
+      "description": "向全服玩家发送空白行，清理可见公屏聊天记录。",
+      "permission": "仅原版管理员权限等级至少2。"
+    },
+    {
+      "path": "fly",
+      "category": "admin",
+      "description": "切换自己或指定在线玩家的飞行能力；关闭时同时停止飞行。",
+      "permission": "对自己和他人均仅限原版管理员权限等级至少2，且须玩家执行；不是自己公开、他人受限的分支。"
+    },
+    {
+      "path": "god",
+      "category": "admin",
+      "description": "切换自己的无敌模式，免受模块伤害事件处理所拦截的伤害。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行。"
+    },
+    {
+      "path": "heal",
+      "category": "admin",
+      "description": "恢复自己或指定在线玩家的全部生命、饥饿和饱和度，并熄灭火焰。",
+      "permission": "治疗自己和他人均仅限原版管理员权限等级至少2；无参数须玩家执行，指定目标须在线。"
+    },
+    {
+      "path": "feed",
+      "category": "admin",
+      "description": "补满自己或指定在线玩家的饥饿值与饱和度。",
+      "permission": "补充自己和他人均仅限原版管理员权限等级至少2；无参数须玩家执行，指定目标须在线。"
+    },
+    {
+      "path": "hat",
+      "category": "tools",
+      "description": "将主手整组物品与头部装备互换，把手持物品戴在头上。",
+      "permission": "玩家公开可用，无命名权限检查；主手不能为空。"
+    },
+    {
+      "path": "repair",
+      "category": "admin",
+      "description": "完全修复主手中可损坏物品的耐久。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；主手须有可损坏物品。"
+    },
+    {
+      "path": "repair all",
+      "category": "admin",
+      "description": "修复自己整个物品栏内所有可损坏物品，包括装备与副手。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；继承根命令的原版权限要求。"
+    },
+    {
+      "path": "top",
+      "category": "travel",
+      "description": "传送到当前位置所在纵列的最高阻挡高度上方，并记录上一位置。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；直接传送，不使用普通传送读条检查。"
+    },
+    {
+      "path": "gm",
+      "category": "admin",
+      "description": "切换自己的生存、创造、冒险或旁观游戏模式，支持模式编号及缩写。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；模式名称、编号和缩写均为参数，不是字面子命令。"
+    },
+    {
+      "path": "speed",
+      "category": "admin",
+      "description": "同时设置自己的行走与飞行速度倍率，范围为0.1至10倍。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行。"
+    },
+    {
+      "path": "msg",
+      "category": "social",
+      "description": "向指定在线玩家发送私聊，并记录双方最近私聊对象。",
+      "permission": "玩家公开可用，无命名权限检查；目标须在线，若对方屏蔽自己则不能发送，原版管理员权限等级至少2可绕过屏蔽；此私聊分支没有禁言检查。"
+    },
+    {
+      "path": "r",
+      "category": "social",
+      "description": "向最近的私聊对象快速回复消息。",
+      "permission": "玩家公开可用，无命名权限检查；须有最近私聊对象且对方在线；对方屏蔽自己时禁止发送，原版管理员权限等级至少2可绕过屏蔽；此分支没有禁言检查。"
+    },
+    {
+      "path": "broadcast",
+      "category": "admin",
+      "description": "以醒目的全服公告格式广播消息。",
+      "permission": "仅原版管理员权限等级至少2。"
+    },
+    {
+      "path": "clearlag",
+      "category": "admin",
+      "description": "立即清理所有已加载世界中的地面掉落物，并广播清理数量。",
+      "permission": "仅原版管理员权限等级至少2；清理后掉落物不可恢复。"
+    },
+    {
+      "path": "mute",
+      "category": "admin",
+      "description": "按分钟禁言在线玩家并记录原因，拦截其普通聊天消息。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线，时间为1至525600分钟，须填写原因；本模块的私聊及离线邮件命令未检查禁言状态。"
+    },
+    {
+      "path": "unmute",
+      "category": "admin",
+      "description": "解除指定在线玩家的本模块禁言。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线。"
+    },
+    {
+      "path": "whois",
+      "category": "admin",
+      "description": "查看在线玩家的身份标识、延迟、坐标、生命、饥饿、余额、家数量和警告数。",
+      "permission": "仅原版管理员权限等级至少2；目标须在线。"
+    },
+    {
+      "path": "afk",
+      "category": "social",
+      "description": "切换自己的暂离状态，并向全服广播离开或返回提示。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "kit",
+      "category": "rewards",
+      "description": "列出服务器礼包、领取冷却、费用及领取按钮。",
+      "permission": "玩家公开可查看，无命名权限检查；实际领取另检查礼包存在、冷却与余额。"
+    },
+    {
+      "path": "kit list",
+      "category": "rewards",
+      "description": "列出全部服务器礼包及各自冷却和费用。",
+      "permission": "玩家公开可用，无命名权限检查。"
+    },
+    {
+      "path": "kit claim",
+      "category": "rewards",
+      "description": "按名称领取礼包，背包放不下的物品会掉落在身边。",
+      "permission": "玩家公开可用，无命名权限检查；礼包须存在、领取冷却已结束且有足够金币支付配置费用；原版管理员权限等级至少2仅绕过冷却，不免除礼包费用。"
+    },
+    {
+      "path": "kit create",
+      "category": "admin",
+      "description": "以自己的快捷栏物品创建或覆盖指定礼包，并设置非负领取冷却秒数与费用。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；快捷栏至少有一件物品；创建时复制物品，不消耗快捷栏内容。"
+    },
+    {
+      "path": "kit delete",
+      "category": "admin",
+      "description": "按名称删除服务器礼包。",
+      "permission": "仅原版管理员权限等级至少2，且须玩家执行；不检查礼包创建者或额外命名权限。"
+    }
+  ]
+}
