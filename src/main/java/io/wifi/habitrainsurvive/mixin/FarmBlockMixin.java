@@ -3,6 +3,8 @@ package io.wifi.habitrainsurvive.mixin;
 import io.wifi.habitrainsurvive.claim.Claim;
 import io.wifi.habitrainsurvive.claim.ClaimFlag;
 import io.wifi.habitrainsurvive.claim.ClaimManager;
+import io.wifi.habitrainsurvive.config.ModuleConfig;
+import io.wifi.habitrainsurvive.config.ModuleId;
 import io.wifi.habitrainsurvive.town.Town;
 import io.wifi.habitrainsurvive.town.TownManager;
 import net.minecraft.core.BlockPos;
@@ -23,24 +25,28 @@ public class FarmBlockMixin {
         if (level.isClientSide()) return;
         String dim = level.dimension().location().toString();
         if (io.wifi.habitrainsurvive.hub.HubProtectionListener.buildDenied(level, entity)) { ci.cancel(); return; }
-        Claim claim = ClaimManager.get().getClaimAt(dim, pos);
-        if (claim != null) {
-            if (entity instanceof ServerPlayer sp && claim.canBreak(sp.getUUID())) {
-                return;
-            }
-            if (!claim.getFlag(ClaimFlag.CROP_TRAMPLE)) {
-                entity.causeFallDamage(fallDistance, 1.0F, entity.damageSources().fall());
-                ci.cancel();
-                return;
+        if (ModuleConfig.isEnabled(ModuleId.CLAIM)) {
+            Claim claim = ClaimManager.get().getClaimAt(dim, pos);
+            if (claim != null) {
+                if (entity instanceof ServerPlayer sp && claim.canBreak(sp.getUUID())) {
+                    return;
+                }
+                if (!claim.getFlag(ClaimFlag.CROP_TRAMPLE)) {
+                    entity.causeFallDamage(fallDistance, 1.0F, entity.damageSources().fall());
+                    ci.cancel();
+                    return;
+                }
             }
         }
-        Town town = TownManager.get().getTownAt(dim, pos);
-        if (town != null) {
-            if (entity instanceof ServerPlayer sp && town.canBuild(sp.getUUID(), pos)) {
-                return;
+        if (ModuleConfig.isEnabled(ModuleId.TOWN)) {
+            Town town = TownManager.get().getTownAt(dim, pos);
+            if (town != null) {
+                if (entity instanceof ServerPlayer sp && town.canBuild(dim, sp.getUUID(), pos)) {
+                    return;
+                }
+                entity.causeFallDamage(fallDistance, 1.0F, entity.damageSources().fall());
+                ci.cancel();
             }
-            entity.causeFallDamage(fallDistance, 1.0F, entity.damageSources().fall());
-            ci.cancel();
         }
     }
 }

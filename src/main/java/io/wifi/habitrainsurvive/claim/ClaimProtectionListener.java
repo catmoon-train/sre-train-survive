@@ -1,5 +1,7 @@
 package io.wifi.habitrainsurvive.claim;
 
+import io.wifi.habitrainsurvive.config.ModuleConfig;
+import io.wifi.habitrainsurvive.config.ModuleId;
 import io.wifi.habitrainsurvive.security.CombatTagManager;
 import io.wifi.habitrainsurvive.town.Town;
 import io.wifi.habitrainsurvive.town.TownManager;
@@ -78,16 +80,20 @@ public class ClaimProtectionListener {
             if (sp.hasPermissions(2)) return true;
             String dim = sp.serverLevel().dimension().location().toString();
 
-            Claim claim = ClaimManager.get().getClaimAt(dim, pos);
-            if (claim != null && !claim.canBreak(sp.getUUID())) {
-                MessageUtil.sendError(sp, "领地防护", "您没有权限在 [" + claim.name + "] 领地内破坏方块！");
-                return false;
+            if (ModuleConfig.isEnabled(ModuleId.CLAIM)) {
+                Claim claim = ClaimManager.get().getClaimAt(dim, pos);
+                if (claim != null && !claim.canBreak(sp.getUUID())) {
+                    MessageUtil.sendError(sp, "领地防护", "您没有权限在 [" + claim.name + "] 领地内破坏方块！");
+                    return false;
+                }
             }
 
-            Town town = TownManager.get().getTownAt(dim, pos);
-            if (town != null && !town.canBuild(sp.getUUID(), pos)) {
-                MessageUtil.sendError(sp, "城镇保护", "您不是城镇 [" + town.name + "] 的授权居民，无法破坏此区域方块！");
-                return false;
+            if (ModuleConfig.isEnabled(ModuleId.TOWN)) {
+                Town town = TownManager.get().getTownAt(dim, pos);
+                if (town != null && !town.canBuild(dim, sp.getUUID(), pos)) {
+                    MessageUtil.sendError(sp, "城镇保护", "您不是城镇 [" + town.name + "] 的授权居民，无法破坏此区域方块！");
+                    return false;
+                }
             }
             return true;
         });
@@ -100,7 +106,7 @@ public class ClaimProtectionListener {
             BlockPos pos = hitResult.getBlockPos();
             ItemStack held = sp.getItemInHand(hand);
 
-            if (hand == InteractionHand.MAIN_HAND && held.is(Items.WOODEN_HOE)) {
+            if (ModuleConfig.isEnabled(ModuleId.CLAIM) && hand == InteractionHand.MAIN_HAND && held.is(Items.WOODEN_HOE)) {
                 if (sp.isShiftKeyDown()) {
                     Claim standing = ClaimManager.get().getClaimAt(sp.serverLevel().dimension().location().toString(), pos);
                     if (standing != null) {
@@ -120,7 +126,7 @@ public class ClaimProtectionListener {
             BlockPos targetPos = (held.getItem() instanceof BlockItem || held.getItem() instanceof BucketItem)
                     ? pos.relative(hitResult.getDirection()) : pos;
 
-            Claim claim = ClaimManager.get().getClaimAt(dim, targetPos);
+            Claim claim = ModuleConfig.isEnabled(ModuleId.CLAIM) ? ClaimManager.get().getClaimAt(dim, targetPos) : null;
             if (claim != null) {
                 BlockState state = world.getBlockState(pos);
                 BlockEntity be = world.getBlockEntity(pos);
@@ -150,10 +156,19 @@ public class ClaimProtectionListener {
                 }
             }
 
-            Town town = TownManager.get().getTownAt(dim, targetPos);
-            if (town != null && !town.canBuild(sp.getUUID(), targetPos)) {
-                MessageUtil.sendError(sp, "城镇保护", "您没有权限在城镇 [" + town.name + "] 内交互或建造！");
-                return InteractionResult.FAIL;
+            if (ModuleConfig.isEnabled(ModuleId.TOWN)) {
+                Town town = TownManager.get().getTownAt(dim, targetPos);
+                if (town != null) {
+                    boolean isPlaceOrModify = held.getItem() instanceof BlockItem || held.getItem() instanceof BucketItem
+                            || held.is(Items.FLINT_AND_STEEL) || held.is(Items.FIRE_CHARGE);
+                    boolean allowed = isPlaceOrModify
+                            ? town.canBuild(dim, sp.getUUID(), targetPos)
+                            : town.canInteract(dim, sp.getUUID(), targetPos);
+                    if (!allowed) {
+                        MessageUtil.sendError(sp, "城镇保护", "您没有权限在城镇 [" + town.name + "] 内交互或建造！");
+                        return InteractionResult.FAIL;
+                    }
+                }
             }
 
             return InteractionResult.PASS;
@@ -163,7 +178,7 @@ public class ClaimProtectionListener {
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (world.isClientSide() || !(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
             String dim = sp.serverLevel().dimension().location().toString();
-            Claim claim = ClaimManager.get().getClaimAt(dim, entity.blockPosition());
+            Claim claim = ModuleConfig.isEnabled(ModuleId.CLAIM) ? ClaimManager.get().getClaimAt(dim, entity.blockPosition()) : null;
             if (claim != null && !sp.hasPermissions(2)) {
                 if (entity instanceof ServerPlayer) {
                     if (!claim.getFlag(ClaimFlag.PVP)) {
@@ -177,10 +192,23 @@ public class ClaimProtectionListener {
                     }
                 }
             }
-            Town town = TownManager.get().getTownAt(dim, entity.blockPosition());
-            if (town != null && entity instanceof ServerPlayer && !town.pvpEnabled && !sp.hasPermissions(2)) {
-                MessageUtil.sendError(sp, "城镇保护", "城镇 [" + town.name + "] 内禁止 PVP！");
-                return InteractionResult.FAIL;
+            if (ModuleConfig.isEnabled(ModuleId.TOWN) && !sp.hasPermissions(2)) {
+                Town town = TownManager.get().getTownAt(dim, entity.blockPosition());
+                if (town != null) {
+                    if (entity instanceof ServerPlayer victim) {
+                        if (!town.pvpEnabled) {
+                            MessageUtil.sendError(sp, "城镇保护", "城镇 [" + town.name + "] 内禁止 PVP！");
+                            return InteractionResult.FAIL;
+                        }
+                        if (!town.friendlyFire && TownManager.get().areFriendly(sp.getUUID(), victim.getUUID())) {
+                            MessageUtil.sendError(sp, "城镇保护", "城镇 [" + town.name + "] 已关闭同城/同盟友军伤害！");
+                            return InteractionResult.FAIL;
+                        }
+                    } else if (!town.canBuild(dim, sp.getUUID(), entity.blockPosition())) {
+                        MessageUtil.sendError(sp, "城镇保护", "您没有权限在城镇 [" + town.name + "] 内攻击生物！");
+                        return InteractionResult.FAIL;
+                    }
+                }
             }
             if (entity instanceof ServerPlayer victim && !sp.getUUID().equals(victim.getUUID())) {
                 CombatTagManager.get().tagCombat(sp, victim);
@@ -192,10 +220,19 @@ public class ClaimProtectionListener {
             if (world.isClientSide() || !(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
             if (sp.hasPermissions(2)) return InteractionResult.PASS;
             String dim = sp.serverLevel().dimension().location().toString();
-            Claim claim = ClaimManager.get().getClaimAt(dim, entity.blockPosition());
-            if (claim != null && !claim.canInteract(sp.getUUID())) {
-                MessageUtil.sendError(sp, "领地防护", "您没有权限与 [" + claim.name + "] 领地内的实体交互！");
-                return InteractionResult.FAIL;
+            if (ModuleConfig.isEnabled(ModuleId.CLAIM)) {
+                Claim claim = ClaimManager.get().getClaimAt(dim, entity.blockPosition());
+                if (claim != null && !claim.canInteract(sp.getUUID())) {
+                    MessageUtil.sendError(sp, "领地防护", "您没有权限与 [" + claim.name + "] 领地内的实体交互！");
+                    return InteractionResult.FAIL;
+                }
+            }
+            if (ModuleConfig.isEnabled(ModuleId.TOWN)) {
+                Town town = TownManager.get().getTownAt(dim, entity.blockPosition());
+                if (town != null && !town.canInteract(dim, sp.getUUID(), entity.blockPosition())) {
+                    MessageUtil.sendError(sp, "城镇保护", "您没有权限与城镇 [" + town.name + "] 内的实体交互！");
+                    return InteractionResult.FAIL;
+                }
             }
             return InteractionResult.PASS;
         });

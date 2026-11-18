@@ -156,7 +156,7 @@ public final class TownGui {
                         openResidentActions(p, town, uuid, name, rank, isMayor);
                     },
                     "状态: " + (online ? "§a在线" : "§7离线"),
-                    (isStaff && !uuid.equals(town.mayorUuid) && !uuid.equals(p.getUUID())) ? "点击管理该居民" : "仅查看"));
+                    (isStaff && !uuid.equals(town.mayorUuid) && !uuid.equals(player.getUUID())) ? "点击管理该居民" : "仅查看"));
         }
         MenuGui.open(player, "城镇居民 · " + town.name, buttons, 0, p -> openDashboard(p, town));
     }

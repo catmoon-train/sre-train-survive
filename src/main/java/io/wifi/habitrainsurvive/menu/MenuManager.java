@@ -239,12 +239,29 @@ public final class MenuManager {
                                 guard(config, page, p -> wordCommand(p, "home ", home.getKey())))));
             }
             case "warps" -> { io.wifi.habitrainsurvive.landmark.LandmarkGui.open(player); return; }
-            case "towns" -> TownManager.get().getAllTowns().stream().sorted(Comparator.comparing(t -> t.name))
-                    .forEach(town -> buttons.add(new MenuGui.Button(MenuGui.icon(Items.OAK_DOOR, town.name,
-                            "镇长: " + town.mayorName, "居民: " + town.residents.size(),
-                            "金库: " + EconomyManager.get().format(town.bankBalance), "公告: " + town.boardMessage,
-                            "公共传送: " + (town.openToPublic ? "开放" : "仅本城及同盟"), "点击前往（身份与开放状态实时检查）"),
-                            guard(config, page, p -> wordCommand(p, "town spawn ", town.name)))));
+            case "towns" -> {
+                if (!io.wifi.habitrainsurvive.config.ModuleConfig.isEnabled(io.wifi.habitrainsurvive.config.ModuleId.TOWN)) {
+                    error(player, "城镇系统模块当前未启用。");
+                    return;
+                }
+                var myTown = TownManager.get().getPlayerTown(player.getUUID());
+                if (myTown != null) {
+                    buttons.add(new MenuGui.Button(MenuGui.icon(Items.BELL, "打开我的城镇面板 [" + myTown.name + "]",
+                            "镇长: " + myTown.mayorName, "居民: " + myTown.residents.size(),
+                            "金库: " + EconomyManager.get().format(myTown.bankBalance), "点击进入城镇可视化管理面板"),
+                            guard(config, page, io.wifi.habitrainsurvive.town.TownGui::open)));
+                } else {
+                    buttons.add(new MenuGui.Button(MenuGui.icon(Items.EMERALD_BLOCK, "创建或加入城镇",
+                            "您尚未加入任何城镇", "点击打开城镇面板创建新城镇"),
+                            guard(config, page, io.wifi.habitrainsurvive.town.TownGui::open)));
+                }
+                TownManager.get().getAllTowns().stream().sorted(Comparator.comparing(t -> t.name))
+                        .forEach(town -> buttons.add(new MenuGui.Button(MenuGui.icon(Items.OAK_DOOR, town.name,
+                                "镇长: " + town.mayorName, "居民: " + town.residents.size(),
+                                "金库: " + EconomyManager.get().format(town.bankBalance), "公告: " + town.boardMessage,
+                                "公共传送: " + (town.openToPublic ? "开放" : "仅本城及同盟"), "点击前往（身份与开放状态实时检查）"),
+                                guard(config, page, p -> wordCommand(p, "town spawn ", town.name)))));
+            }
             case "players" -> player.server.getPlayerList().getPlayers().stream()
                     .filter(target -> !target.getUUID().equals(player.getUUID()) && visible(player, target))
                     .sorted(Comparator.comparing(p -> p.getGameProfile().getName(), String.CASE_INSENSITIVE_ORDER))
